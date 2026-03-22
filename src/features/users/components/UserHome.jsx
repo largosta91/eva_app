@@ -3,6 +3,8 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../../constants/routes';
 import useAppStore from '../../../app/store/useAppStore';
+import VideoCall from '../../calls/components/VideoCall';
+import GiftPanel from '../../chat/components/GiftPanel';
 
 // ─── DATA ────────────────────────────────────────────────
 const GIRLS = [
@@ -25,12 +27,49 @@ const AI_REPLIES = [
 const ANIM_CSS = `
   @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
   @keyframes ty{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-7px)}}
+  @keyframes gift-pop-in{0%{transform:translate(-50%,-50%) scale(0) rotate(-15deg);opacity:0}60%{transform:translate(-50%,-50%) scale(1.2) rotate(5deg);opacity:1}100%{transform:translate(-50%,-50%) scale(1) rotate(0deg);opacity:1}}
+  @keyframes gift-pop-out{0%{transform:translate(-50%,-50%) scale(1);opacity:1}100%{transform:translate(-50%,-50%) scale(1.5);opacity:0}}
+  @keyframes gift-name-in{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:translateY(0)}}
 `;
 
 const nowTime = () => {
   const d = new Date();
   return `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
 };
+
+// ── Overlay animación regalo ────────────────────────────────
+function GiftOverlay({ gift, onDone }) {
+  const [phase, setPhase] = useState("in");
+  useEffect(() => {
+    const t1 = setTimeout(() => setPhase("out"), 2000);
+    const t2 = setTimeout(() => onDone?.(), 2500);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <>
+      <div style={{ position:"fixed", inset:0, zIndex:60, background:"rgba(0,0,0,0.45)", pointerEvents:"none" }} />
+      <div style={{
+        position:"fixed", top:"50%", left:"50%", zIndex:61,
+        display:"flex", flexDirection:"column", alignItems:"center", gap:"12px", pointerEvents:"none",
+        animation: phase === "in"
+          ? "gift-pop-in 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards"
+          : "gift-pop-out 0.5s ease-in forwards",
+      }}>
+        <span style={{ fontSize:"120px", lineHeight:1, filter:`drop-shadow(0 0 40px ${gift.color})` }}>
+          {gift.emoji}
+        </span>
+        <div style={{
+          background:`${gift.color}22`, border:`1px solid ${gift.color}88`,
+          borderRadius:"24px", padding:"6px 20px", color:"#fff",
+          fontSize:"16px", fontWeight:600, animation:"gift-name-in 0.4s ease-out 0.3s both",
+        }}>
+          {gift.name}
+        </div>
+      </div>
+    </>
+  );
+}
 
 // ══════════════════════════════════════════════════════════
 //  ROOT
@@ -258,9 +297,11 @@ function ChatScreen({ girl, onBack, credits, onSpend }) {
   const [messages, setMessages] = useState([
     { who:'them', text:`Hola 😊 Soy ${girl.name}, ¿cómo estás hoy?`, time:nowTime() }
   ]);
-  const [input, setInput]   = useState('');
-  const [typing, setTyping] = useState(false);
-  const [showVC, setShowVC] = useState(false);
+  const [input, setInput]       = useState('');
+  const [typing, setTyping]     = useState(false);
+  const [showVC, setShowVC]     = useState(false);
+  const [showGifts, setShowGifts] = useState(false);   // ⭐ nuevo
+  const [activeGift, setActiveGift] = useState(null);  // ⭐ nuevo
   const aiRef     = useRef(0);
   const bottomRef = useRef(null);
 
@@ -280,10 +321,39 @@ function ChatScreen({ girl, onBack, credits, onSpend }) {
     }, 1800);
   };
 
-  if (showVC) return <VideoCall girl={girl} credits={credits} onSpend={onSpend} onEnd={() => setShowVC(false)} />;
+  // ⭐ nuevo — manejo de regalo
+  const handleGiftSend = (gift) => {
+    const t = nowTime();
+    setMessages(m => [...m, {
+      who: 'me',
+      text: `${gift.emoji} ${gift.name}`,
+      time: t,
+      isGift: true,
+      giftColor: gift.color,
+    }]);
+    onSpend(gift.cost);
+    setActiveGift(gift);
+    setShowGifts(false);
+  };
+
+  if (showVC) return (
+    <VideoCall
+      creator={{ id: girl.name, name: girl.name, avatar: girl.img }}
+      user={{ id: 'user', name: 'Vos', credits: credits }}
+      onEnd={() => setShowVC(false)}
+      theme="dark"
+    />
+  );
 
   return (
-    <div className="flex flex-col h-screen bg-[#09080f]">
+    <div className="flex flex-col h-screen bg-[#09080f]" style={{ position: "relative" }}>
+
+      {/* ⭐ Overlay animación regalo */}
+      {activeGift && (
+        <GiftOverlay gift={activeGift} onDone={() => setActiveGift(null)} />
+      )}
+
+      {/* HEADER */}
       <div className="flex items-center gap-3 py-3.5 px-4 bg-[#111018] border-b border-[rgba(201,168,76,.14)] shrink-0">
         <button onClick={onBack} className="bg-transparent border-none text-[#ede8ff] text-2xl cursor-pointer leading-none">←</button>
         <img src={girl.img} alt={girl.name} className="w-11 h-11 rounded-full object-cover border-2 border-[#c9a84c]" />
@@ -302,12 +372,28 @@ function ChatScreen({ girl, onBack, credits, onSpend }) {
         </button>
       </div>
 
+      {/* MENSAJES */}
       <div className="flex-1 overflow-y-auto py-4 px-4 flex flex-col gap-2.5">
         {messages.map((m, i) => (
           <div key={i} className={`max-w-[76%] ${m.who === 'me' ? 'self-end' : 'self-start'}`}>
-            <div className={`py-3 px-4 rounded-[20px] text-sm leading-relaxed ${m.who === 'me' ? 'bg-gradient-to-br from-[#c9a84c] to-[#f0d882] text-[#09080f] rounded-br-[4px]' : 'bg-[#1a1826] text-[#ede8ff] rounded-bl-[4px]'}`}>
-              {m.text}
-            </div>
+            {/* ⭐ burbuja regalo */}
+            {m.isGift ? (
+              <div style={{
+                display:"flex", flexDirection:"column", alignItems:"center",
+                padding:"10px 16px", borderRadius:"16px",
+                background:`${m.giftColor}22`, border:`1px solid ${m.giftColor}66`,
+                minWidth:"80px",
+              }}>
+                <span style={{ fontSize:"32px", lineHeight:1 }}>{m.text.split(" ")[0]}</span>
+                <span style={{ fontSize:"11px", color: m.giftColor, fontWeight:600, marginTop:"4px" }}>
+                  {m.text.split(" ").slice(1).join(" ")}
+                </span>
+              </div>
+            ) : (
+              <div className={`py-3 px-4 rounded-[20px] text-sm leading-relaxed ${m.who === 'me' ? 'bg-gradient-to-br from-[#c9a84c] to-[#f0d882] text-[#09080f] rounded-br-[4px]' : 'bg-[#1a1826] text-[#ede8ff] rounded-bl-[4px]'}`}>
+                {m.text}
+              </div>
+            )}
             <div className={`text-[11px] text-[#7a748f] mt-1 px-1 ${m.who === 'me' ? 'text-right' : 'text-left'}`}>{m.time}</div>
           </div>
         ))}
@@ -325,7 +411,30 @@ function ChatScreen({ girl, onBack, credits, onSpend }) {
         💎 {credits} créditos · −2 por mensaje
       </div>
 
+      {/* ⭐ Gift Panel */}
+      {showGifts && (
+        <GiftPanel
+          context="chat"
+          onSend={handleGiftSend}
+          onClose={() => setShowGifts(false)}
+        />
+      )}
+
+      {/* INPUT */}
       <div className="py-2.5 px-3.5 pb-5 bg-[#111018] border-t border-[rgba(201,168,76,.14)] flex gap-2.5 items-center shrink-0">
+        {/* ⭐ Botón regalos */}
+        <button
+          onClick={() => setShowGifts(g => !g)}
+          style={{
+            background: showGifts ? "rgba(201,168,76,.3)" : "rgba(255,255,255,.08)",
+            border: showGifts ? "1px solid rgba(201,168,76,.6)" : "1px solid rgba(255,255,255,.1)",
+            borderRadius:"50%", width:"40px", height:"40px",
+            fontSize:"18px", cursor:"pointer", flexShrink:0,
+          }}
+        >
+          🎁
+        </button>
+
         <input
           value={input}
           onChange={e => setInput(e.target.value)}
@@ -339,65 +448,6 @@ function ChatScreen({ girl, onBack, credits, onSpend }) {
         >
           ➤
         </button>
-      </div>
-    </div>
-  );
-}
-
-// ══════════════════════════════════════════════════════════
-//  VIDEO CALL
-// ══════════════════════════════════════════════════════════
-function VideoCall({ girl, credits, onSpend, onEnd }) {
-  const [secs, setSecs]     = useState(0);
-  const [status, setStatus] = useState('Conectando...');
-  const [muted, setMuted]   = useState(false);
-  const [camOff, setCamOff] = useState(false);
-
-  const fmtTime = s => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
-
-  useEffect(() => {
-    const t1 = setTimeout(() => setStatus('En llamada ✦'), 1500);
-    const t2 = setInterval(() => {
-      setSecs(s => { if ((s+1)%30 === 0) onSpend(1); return s+1; });
-    }, 1000);
-    return () => { clearTimeout(t1); clearInterval(t2); };
-  }, []);
-
-  return (
-    <div className="h-screen bg-black relative overflow-hidden flex flex-col">
-      <div className="absolute inset-0 bg-gradient-to-br from-[#1a0830] to-[#09080f] flex items-center justify-center text-[200px] opacity-[0.15]">
-        {girl.emoji}
-      </div>
-
-      <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/70 to-transparent">
-        <div className="text-lg font-medium text-white">{fmtTime(secs)}</div>
-        <div className="bg-[rgba(201,168,76,.2)] border border-[rgba(201,168,76,.4)] rounded-full py-1.5 px-3.5 text-sm text-[#c9a84c]">💎 {credits} · −2/min</div>
-      </div>
-
-      <div className="absolute inset-0 flex flex-col items-center justify-center z-0">
-        <img src={girl.img} alt={girl.name} className="w-28 h-28 rounded-full object-cover border-[3px] border-[#c9a84c] mb-4" />
-        <div className="font-serif text-3xl font-semibold text-white">{girl.name}</div>
-        <div className="text-white/60 text-sm mt-1.5">{status}</div>
-      </div>
-
-      <div className="absolute bottom-32 right-4 w-24 h-36 bg-[#1a1826] rounded-2xl border-2 border-white/20 flex items-center justify-center text-4xl z-10">
-        {camOff ? '🚫' : '🤳'}
-      </div>
-
-      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-4 z-20">
-        {[
-          { icon: muted ? '🔇' : '🎤', fn: () => setMuted(m => !m), cls: 'bg-white/15' },
-          { icon: '📵',                 fn: onEnd,                    cls: 'bg-red-500' },
-          { icon: camOff ? '🚫' : '📷', fn: () => setCamOff(c => !c), cls: 'bg-white/15' },
-        ].map((b, i) => (
-          <button
-            key={i}
-            onClick={b.fn}
-            className={`w-14 h-14 rounded-full border-none ${b.cls} backdrop-blur-md text-2xl cursor-pointer flex items-center justify-center transition-transform duration-200 hover:scale-110`}
-          >
-            {b.icon}
-          </button>
-        ))}
       </div>
     </div>
   );

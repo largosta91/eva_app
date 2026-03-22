@@ -31,7 +31,7 @@ export default function App() {
     const token = getRecruiterToken();
     if (token) saveRecruiterToken(token);
     setLoading(false);
-  }, []);
+  }, [setLoading]);
 
   if (isLoading) return (
     <div className="h-screen bg-[#09080f] flex items-center justify-center">
