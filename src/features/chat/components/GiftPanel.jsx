@@ -5,38 +5,46 @@ import { useRef } from "react";
    SONIDOS (forma correcta en Vite)
 ───────────────────────────── */
 
-const sonidoCopa = new URL(
-  "../../../assets/sounds/copa_de_vino.wav.mp3",
+const sonidoBasico = new URL(
+  "../../../assets/sounds/sonidobasico.mp3",
   import.meta.url
 ).href;
 
-const sonidoDiamante = new URL(
-  "../../../assets/sounds/diamante.wav.mp3",
+const sonidoRosa = new URL(
+  "../../../assets/sounds/rosa.mp3",
+  import.meta.url
+).href;
+
+const sonidoCopa = new URL(
+  "../../../assets/sounds/copadevino.mp3",
+  import.meta.url
+).href;
+
+const diamante = new URL(
+  "../../../assets/sounds/diamante2.mp3",
   import.meta.url
 ).href;
 
 const sonidoAnillo = new URL(
-  "../../../assets/sounds/anillo.wav.mp3",
+  "../../../assets/sounds/anillo.mp3",
   import.meta.url
 ).href;
 
 const sonidoOro = new URL(
-  "../../../assets/sounds/bolsa_de_oro.wav.mp3",
+  "../../../assets/sounds/bolsadeoro.mp3",
   import.meta.url
 ).href;
 
-/* ─────────────────────────────
-   REGALOS
-───────────────────────────── */
-
 const GIFTS = [
-  { id: 1, name: "Beso",     emoji: "💋", cost: 5,   color: "#ff6b8a", sound: null },
-  { id: 3, name: "Copa",     emoji: "🍷", cost: 20,  color: "#9b2335", sound: sonidoCopa },
-  { id: 4, name: "Diamante", emoji: "💎", cost: 100, color: "#7c3aed", sound: sonidoDiamante },
-  { id: 5, name: "Anillo",   emoji: "💍", cost: 300, color: "#c9a84c", sound: sonidoAnillo },
-  { id: 6, name: "Oro",      emoji: "💰", cost: 500, color: "#c9a84c", sound: sonidoOro },
+  { id: 1, name: "Beso",     emoji: "💋", cost: 5,    color: "#ff6b8a", sound: sonidoBasico },
+  { id: 2, name: "Fuego",    emoji: "🔥", cost: 12,   color: "#ff4500", sound: sonidoBasico },
+  { id: 3, name: "Corazón",  emoji: "❤️", cost: 10,   color: "#ff0000", sound: sonidoBasico },
+  { id: 4, name: "Rosa",     emoji: "🌹", cost: 7,    color: "#ff007f", sound: sonidoRosa },
+  { id: 5, name: "Copa",     emoji: "🍷", cost: 20,   color: "#9b2335", sound: sonidoCopa },
+  { id: 6, name: "Diamante", emoji: "💎", cost: 100,  color: "#7c3aed", sound: diamante },
+  { id: 7, name: "Anillo",   emoji: "💍", cost: 300,  color: "#c9a84c", sound: sonidoAnillo },
+  { id: 8, name: "ORO",      emoji: "💰", cost: 1000, color: "#c9a84c", sound: sonidoOro },
 ];
-
 /* ─────────────────────────────
    COMPONENTE
 ───────────────────────────── */
@@ -70,6 +78,8 @@ const GiftPanel = ({ onSend, onClose }) => {
     onSend?.(gift);
   };
 
+  const giftsToRender = Array.isArray(GIFTS[0]) ? GIFTS.flat() : GIFTS;
+
   return (
     <div
       style={{
@@ -87,7 +97,7 @@ const GiftPanel = ({ onSend, onClose }) => {
         boxShadow: "0 -10px 25px rgba(0,0,0,0.5)",
       }}
     >
-      {GIFTS.map((gift) => (
+      {giftsToRender.map((gift) => (
         <button
           key={gift.id}
           onClick={() => handleGiftClick(gift)}
