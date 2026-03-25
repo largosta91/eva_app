@@ -3,7 +3,7 @@ import { ROUTES } from '../../constants/routes';
 import useAppStore from '../../app/store/useAppStore';
 
 export default function ProtectedRoute({ children, requiredRole }) {
-  const { isLoggedIn, user, credits } = useAppStore();
+  const { isLoggedIn, user } = useAppStore();
 
   if (!isLoggedIn) {
     return <Navigate to={ROUTES.LOGIN} replace />;

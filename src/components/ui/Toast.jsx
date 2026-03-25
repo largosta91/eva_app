@@ -11,36 +11,11 @@
 //      toast.show('Mensaje enviado ✅')
 //      toast.show('Error al conectar', 5000) ← duración personalizada en ms
 
-import { useState } from "react";
-
-// ── HOOK ─────────────────────────────────────────────────────────────────────
-// Encapsula el estado del toast para que el componente que lo usa
-// no tenga que manejar timers ni visibilidad manualmente.
-export function useToast() {
-  const [msg, setMsg]         = useState('');
-  const [visible, setVisible] = useState(false);
-
-  const show = (message, duration = 3000) => {
-    setMsg(message);
-    setVisible(true);
-    setTimeout(() => setVisible(false), duration);
-  };
-
-  // Retornamos msg, visible y show para que el padre pueda:
-  // - Pasar msg y visible al componente Toast
-  // - Pasar show() a cualquier hijo que necesite mostrar notificaciones
-  return { msg, visible, show };
-}
-
-// ── COMPONENTE VISUAL ─────────────────────────────────────────────────────────
-// El tema 'dark' usa el fondo oscuro del panel masculino (#09080f).
-// El tema 'light' usa el fondo crema del panel femenino (#fdf6f0).
-// La animación de entrada/salida se logra con Tailwind transition + translate.
 export default function Toast({ msg, visible, theme = 'dark' }) {
 
   const themes = {
-    dark:  'bg-[#1a1826] border-[rgba(201,168,76,.2)]  text-[#ede8ff]',
-    light: 'bg-[#fff9f5] border-[rgba(196,96,122,.2)]  text-[#2a1a20]',
+    dark:  'bg-[#1a1826] border-[rgba(201,168,76,.2)] text-[#ede8ff]',
+    light: 'bg-[#fff9f5] border-[rgba(196,96,122,.2)] text-[#2a1a20]',
   };
 
   return (

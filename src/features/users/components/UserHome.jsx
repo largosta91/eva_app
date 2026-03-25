@@ -6,7 +6,6 @@ import useAppStore from '../../../app/store/useAppStore';
 import VideoCall from '../../calls/components/VideoCall';
 import GiftPanel from '../../chat/components/GiftPanel';
 
-// ─── DATA ────────────────────────────────────────────────
 const GIRLS = [
   { name:"Valentina", age:21, emoji:"🌺", tags:["Empática","Cálida"],      vip:true,  online:true,  img:"https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80" },
   { name:"Camila",    age:24, emoji:"🦋", tags:["Música","Creativa"],      vip:false, online:true,  img:"https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=400&q=80" },
@@ -37,7 +36,6 @@ const nowTime = () => {
   return `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
 };
 
-// ── Overlay animación regalo ────────────────────────────────
 function GiftOverlay({ gift, onDone }) {
   const [phase, setPhase] = useState("in");
   useEffect(() => {
@@ -71,9 +69,6 @@ function GiftOverlay({ gift, onDone }) {
   );
 }
 
-// ══════════════════════════════════════════════════════════
-//  ROOT
-// ══════════════════════════════════════════════════════════
 export default function UserHome() {
   const navigate  = useNavigate();
   const { credits, spendCredits, logout } = useAppStore();
@@ -105,24 +100,24 @@ export default function UserHome() {
 
   return (
     <div className="w-full h-screen bg-[#09080f] text-[#ede8ff] flex flex-col overflow-hidden">
-
-      {/* TOP BAR */}
-      <div className="flex items-center justify-between py-3.5 px-5 bg-[#111018] border-b border-[rgba(201,168,76,.14)] shrink-0">
-        <span className="text-xl cursor-pointer text-[#7a748f]">☰</span>
-        <span className="font-serif text-3xl font-semibold bg-gradient-to-br from-[#c9a84c] to-[#f0d882] bg-clip-text text-transparent">Eva</span>
-        <div className="flex items-center gap-1.5 bg-[#1a1826] border border-[rgba(201,168,76,.14)] rounded-full py-2 px-4 text-sm font-medium text-[#c9a84c] cursor-pointer">
-          💎 {credits}
+      <div className="grid grid-cols-3 items-center py-3.5 px-5 bg-[#111018] border-b border-[rgba(201,168,76,.14)] shrink-0">
+        <div></div>
+        <span className="font-serif text-3xl font-semibold bg-gradient-to-br from-[#8b3a9c] to-[#c9a84c] bg-clip-text text-transparent text-center whitespace-nowrap">
+          Eva
+        </span>
+        <div className="flex justify-end">
+          <div className="flex items-center gap-1.5 bg-[#1a1826] border border-[rgba(201,168,76,.14)] rounded-full py-2 px-4 text-sm font-medium text-[#c9a84c] cursor-pointer">
+            💎 {credits}
+          </div>
         </div>
       </div>
 
-      {/* CONTENT */}
       <div className="flex-1 overflow-y-auto">
         {tab === 'home'    && <HomeTab onSelectGirl={setSelectedGirl} />}
         {tab === 'credits' && <CreditsTab />}
-        {tab === 'profile' && <ProfileTab onLogout={handleLogout} />}
+        {tab === 'profile' && <ProfileTab onLogout={handleLogout} setTab={setTab} />}
       </div>
 
-      {/* TAB BAR */}
       <div className="flex bg-[#111018] border-t border-[rgba(201,168,76,.14)] pt-2.5 pb-5 shrink-0">
         {[
           { key:'home',    icon:'🔥', label:'Explorar' },
@@ -142,9 +137,6 @@ export default function UserHome() {
   );
 }
 
-// ══════════════════════════════════════════════════════════
-//  HOME TAB
-// ══════════════════════════════════════════════════════════
 function HomeTab({ onSelectGirl }) {
   return (
     <div className="pt-5 px-4 pb-8">
@@ -169,17 +161,14 @@ function HomeTab({ onSelectGirl }) {
           >
             <img src={g.img} alt={g.name} className="w-full h-full object-cover block" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent" />
-
             {!g.online && (
               <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                 <span className="bg-black/70 text-white/70 text-[11px] font-semibold py-1 px-3.5 rounded-full">En llamada...</span>
               </div>
             )}
-
             {g.vip && (
               <div className="absolute top-3 right-3 bg-[rgba(201,168,76,.25)] border border-[rgba(201,168,76,.5)] rounded-full py-0.5 px-2.5 text-[10px] text-[#e8c97a] font-semibold">⭐ TOP</div>
             )}
-
             <div className="absolute bottom-0 left-0 right-0 p-3.5">
               <div className="font-serif text-xl font-semibold text-white mb-0.5">{g.name}, {g.age}</div>
               <div className={`text-[11px] flex items-center gap-1.5 ${g.online ? 'text-green-400' : 'text-white/50'}`}>
@@ -199,9 +188,6 @@ function HomeTab({ onSelectGirl }) {
   );
 }
 
-// ══════════════════════════════════════════════════════════
-//  CREDITS TAB
-// ══════════════════════════════════════════════════════════
 function CreditsTab() {
   const { credits, addCredits } = useAppStore();
   const [sel, setSel] = useState(null);
@@ -225,7 +211,6 @@ function CreditsTab() {
     <div className="px-4 pt-5 pb-8">
       <div className="font-serif text-2xl font-semibold text-center mb-1 text-[#ede8ff]">Créditos</div>
       <div className="text-sm text-[#7a748f] text-center mb-6">Saldo actual: 💎 {credits}</div>
-
       <div className="flex flex-col gap-3 mb-6">
         {packs.map(p => (
           <div
@@ -246,7 +231,6 @@ function CreditsTab() {
           </div>
         ))}
       </div>
-
       <button
         onClick={buy}
         disabled={!sel}
@@ -258,41 +242,83 @@ function CreditsTab() {
   );
 }
 
-// ══════════════════════════════════════════════════════════
-//  PROFILE TAB
-// ══════════════════════════════════════════════════════════
 function ProfileTab({ onLogout }) {
-  const items = ['🎭 Mi avatar','🔔 Notificaciones','🔒 Privacidad','💬 Soporte'];
+  const { credits } = useAppStore();
+  const navigate = useNavigate();
+  const [avatarUrl, setAvatarUrl] = useState(null);
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarUrl(URL.createObjectURL(file));
+  };
+
   return (
-    <div className="px-4 pt-5 pb-8 flex flex-col gap-5">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-20 h-20 rounded-full bg-[#1a1826] text-4xl flex items-center justify-center border-2 border-[#c9a84c]">🎩</div>
-        <div className="font-serif text-2xl font-semibold text-[#ede8ff]">Mi Perfil</div>
-        <div className="text-sm text-[#7a748f]">Miembro desde 2024</div>
-      </div>
+    // pt-5 para subir todo el contenido
+    <div className="px-6 pt-5 pb-32 flex flex-col overflow-y-auto animate-fadeIn">
 
-      <div className="bg-[#1a1826] border border-[rgba(201,168,76,.14)] rounded-2xl overflow-hidden">
-        {items.map((item, i) => (
-          <div key={item} className={`flex items-center justify-between px-4 py-4 cursor-pointer ${i < items.length - 1 ? 'border-b border-[rgba(201,168,76,.14)]' : ''}`}>
-            <span className="text-[15px] text-[#ede8ff]">{item}</span>
-            <span className="text-[#7a748f] text-lg">›</span>
+      <div className="flex flex-col items-center mb-4">
+        <div className="relative">
+          <div className="w-28 h-28 rounded-full bg-[#1a1826] border-2 border-[#c9a84c] flex items-center justify-center overflow-hidden shadow-[0_0_30px_rgba(201,168,76,0.15)]">
+            {avatarUrl
+              ? <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+              : <span className="text-5xl">👤</span>
+            }
           </div>
-        ))}
+          <label className="absolute bottom-1 right-1 bg-[#c9a84c] text-[#09080f] w-8 h-8 rounded-full border-2 border-[#09080f] flex items-center justify-center text-xs font-bold shadow-lg cursor-pointer">
+            📷
+            <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+          </label>
+        </div>
+        <div className="mt-4 text-center">
+          <div className="flex items-center justify-center gap-2">
+            <h2 className="text-2xl font-semibold text-[#ede8ff]">Usuario</h2>
+            <button className="text-[#7a748f] text-sm">✏️</button>
+          </div>
+          <p className="text-[#7a748f] text-[11px] uppercase tracking-[3px] mt-1 font-bold">Mi Perfil</p>
+        </div>
       </div>
 
-      <button
-        onClick={onLogout}
-        className="w-full py-3.5 bg-transparent border border-[rgba(201,168,76,.14)] rounded-full text-[#7a748f] text-[15px] cursor-pointer"
-      >
-        Cerrar sesión
-      </button>
+      <div className="bg-gradient-to-br from-[#1a1826] to-[#111018] border border-[rgba(201,168,76,0.2)] rounded-3xl p-6 mb-3 flex items-center justify-between shadow-xl">
+        <div>
+          <p className="text-[#7a748f] text-xs uppercase font-bold tracking-wider">Diamantes</p>
+          <p className="text-3xl font-bold text-[#c9a84c] mt-1">💎 {credits}</p>
+        </div>
+        <button
+          onClick={() => navigate(ROUTES.PAYWALL)}
+          className="bg-[#c9a84c] text-[#09080f] px-6 py-3 rounded-xl font-bold text-sm shadow-[0_4px_15px_rgba(201,168,76,0.3)] active:scale-95 transition-transform cursor-pointer"
+        >
+          CARGAR
+        </button>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <button className="w-full bg-[#1a1826] border border-[rgba(201,168,76,0.1)] py-5 px-6 rounded-2xl flex items-center justify-between group active:bg-white/5 transition-colors cursor-pointer">
+          <div className="flex items-center gap-4">
+            <span className="text-2xl">🎧</span>
+            <div className="text-left">
+              <p className="text-[#ede8ff] text-[16px] font-semibold">Soporte Técnico</p>
+              <p className="text-[#7a748f] text-xs">Reportar problemas con pagos</p>
+            </div>
+          </div>
+          <span className="text-[#5a5470] text-xl">›</span>
+        </button>
+
+        <button
+          onClick={onLogout}
+          className="mt-4 w-full py-4 text-[#5a5470] text-[13px] font-medium hover:text-red-400 transition-colors cursor-pointer"
+        >
+          Cerrar sesión segura
+        </button>
+      </div>
+
+      <p className="mt-8 text-[9px] text-[#423d57] text-center uppercase tracking-[3px]">
+        Eva App v1.0.2
+      </p>
     </div>
   );
 }
 
-// ══════════════════════════════════════════════════════════
-//  CHAT SCREEN
-// ══════════════════════════════════════════════════════════
 function ChatScreen({ girl, onBack, credits, onSpend }) {
   const [messages, setMessages] = useState([
     { who:'them', text:`Hola 😊 Soy ${girl.name}, ¿cómo estás hoy?`, time:nowTime() }
@@ -300,8 +326,8 @@ function ChatScreen({ girl, onBack, credits, onSpend }) {
   const [input, setInput]       = useState('');
   const [typing, setTyping]     = useState(false);
   const [showVC, setShowVC]     = useState(false);
-  const [showGifts, setShowGifts] = useState(false);   // ⭐ nuevo
-  const [activeGift, setActiveGift] = useState(null);  // ⭐ nuevo
+  const [showGifts, setShowGifts] = useState(false);
+  const [activeGift, setActiveGift] = useState(null);
   const aiRef     = useRef(0);
   const bottomRef = useRef(null);
 
@@ -321,7 +347,6 @@ function ChatScreen({ girl, onBack, credits, onSpend }) {
     }, 1800);
   };
 
-  // ⭐ nuevo — manejo de regalo
   const handleGiftSend = (gift) => {
     const t = nowTime();
     setMessages(m => [...m, {
@@ -347,13 +372,8 @@ function ChatScreen({ girl, onBack, credits, onSpend }) {
 
   return (
     <div className="flex flex-col h-screen bg-[#09080f]" style={{ position: "relative" }}>
+      {activeGift && <GiftOverlay gift={activeGift} onDone={() => setActiveGift(null)} />}
 
-      {/* ⭐ Overlay animación regalo */}
-      {activeGift && (
-        <GiftOverlay gift={activeGift} onDone={() => setActiveGift(null)} />
-      )}
-
-      {/* HEADER */}
       <div className="flex items-center gap-3 py-3.5 px-4 bg-[#111018] border-b border-[rgba(201,168,76,.14)] shrink-0">
         <button onClick={onBack} className="bg-transparent border-none text-[#ede8ff] text-2xl cursor-pointer leading-none">←</button>
         <img src={girl.img} alt={girl.name} className="w-11 h-11 rounded-full object-cover border-2 border-[#c9a84c]" />
@@ -372,11 +392,9 @@ function ChatScreen({ girl, onBack, credits, onSpend }) {
         </button>
       </div>
 
-      {/* MENSAJES */}
       <div className="flex-1 overflow-y-auto py-4 px-4 flex flex-col gap-2.5">
         {messages.map((m, i) => (
           <div key={i} className={`max-w-[76%] ${m.who === 'me' ? 'self-end' : 'self-start'}`}>
-            {/* ⭐ burbuja regalo */}
             {m.isGift ? (
               <div style={{
                 display:"flex", flexDirection:"column", alignItems:"center",
@@ -411,18 +429,11 @@ function ChatScreen({ girl, onBack, credits, onSpend }) {
         💎 {credits} créditos · −2 por mensaje
       </div>
 
-      {/* ⭐ Gift Panel */}
       {showGifts && (
-        <GiftPanel
-          context="chat"
-          onSend={handleGiftSend}
-          onClose={() => setShowGifts(false)}
-        />
+        <GiftPanel context="chat" onSend={handleGiftSend} onClose={() => setShowGifts(false)} />
       )}
 
-      {/* INPUT */}
       <div className="py-2.5 px-3.5 pb-5 bg-[#111018] border-t border-[rgba(201,168,76,.14)] flex gap-2.5 items-center shrink-0">
-        {/* ⭐ Botón regalos */}
         <button
           onClick={() => setShowGifts(g => !g)}
           style={{
@@ -434,7 +445,6 @@ function ChatScreen({ girl, onBack, credits, onSpend }) {
         >
           🎁
         </button>
-
         <input
           value={input}
           onChange={e => setInput(e.target.value)}

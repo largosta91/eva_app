@@ -27,42 +27,26 @@
 //   subtitlesOn       → boolean — estado actual de los subtítulos
 //   onToggleMute      → función para alternar el mic
 //   onToggleCam       → función para alternar la cámara
-//   onToggleSubtitles → función para alternar los subtítulos
 
 export default function CallControls({
   onEnd,
   muted             = false,
   camOff            = false,
-  subtitlesOn       = false,
   onToggleMute,
   onToggleCam,
-  onToggleSubtitles,
+  miniChatAbierto   = false, // <-- IMPORTANTE: El padre debe pasar este estado
 }) {
 
   const handleMute = () => {
-    // TODO: localStream.getAudioTracks()[0].enabled = muted
-    // TODO: socket.emit('mute', { callId, muted: !muted })
-    console.log("Micrófono:", muted ? "activado" : "muteado");
     onToggleMute?.();
   };
 
   const handleToggleCamera = () => {
-    // TODO: localStream.getVideoTracks()[0].enabled = camOff
-    // TODO: socket.emit('cam_off', { callId, camOff: !camOff })
-    console.log("Cámara:", camOff ? "activada" : "apagada");
     onToggleCam?.();
   };
 
   const handleEndCall = () => {
-    // TODO: socket.emit('end_call', { callId })
-    // TODO: pc.close() y localStream.getTracks().forEach(t => t.stop())
-    console.log("Llamada finalizada");
     onEnd?.();
-  };
-
-  const handleToggleSubtitles = () => {
-    console.log("Subtítulos:", subtitlesOn ? "desactivados" : "activados");
-    onToggleSubtitles?.();
   };
 
   const buttons = [
@@ -83,19 +67,30 @@ export default function CallControls({
       label:   camOff ? "Activar cámara" : "Apagar cámara",
       onClick: handleToggleCamera,
       active:  camOff,
-    },
-    {
-      icon:    subtitlesOn ? "💬" : "🔕",
-      label:   subtitlesOn ? "Subs ON" : "Subs OFF",
-      onClick: handleToggleSubtitles,
-      active:  subtitlesOn,
-    },
+    }
   ];
 
   return (
     <div
       className="flex items-center justify-evenly pb-10 pt-4 px-8"
-      style={{ background: "linear-gradient(to top, rgba(0,0,0,.8), transparent)" }}
+      style={{ 
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        // CLAVE 1: El zIndex debe ser menor al del MiniChat (que suele ser 100)
+        zIndex: 10, 
+        background: "linear-gradient(to top, rgba(0,0,0,.8), transparent)",
+        
+        // CLAVE 2: LA ANULACIÓN TOTAL
+        // 'none' hace que el click pase de largo y lo reciba lo que esté atrás (el MiniChat)
+        pointerEvents: miniChatAbierto ? "none" : "auto", 
+        
+        // Visualmente los "apagamos" para que el usuario no intente tocarlos
+        opacity: miniChatAbierto ? 0 : 1, 
+        visibility: miniChatAbierto ? "hidden" : "visible",
+        transition: "all 0.3s ease"
+      }}
     >
       {buttons.map((btn, i) => (
         <div key={i} className="flex flex-col items-center gap-1.5">

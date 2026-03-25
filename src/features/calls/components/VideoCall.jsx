@@ -2,9 +2,8 @@
 import { useState, useEffect, useRef } from "react";
 import GiftPanel                       from "../../chat/components/GiftPanel";
 import CallControls                    from "./CallControls";
-import SubtitlesOverlay                from "./SubtitlesOverlay";
 import MiniChat                        from "./MiniChat.jsx";
-import { createTranscriptionService }  from "../services/transcriptionService"
+
 
 const OVERLAY_KEYFRAMES = `
   @keyframes gift-overlay-in {
@@ -122,31 +121,6 @@ export default function VideoCall({
   const [activeGift, setActiveGift] = useState(null);
   const [showChat, setShowChat]     = useState(false); // ⭐ toggle mini chat
 
-  // ── Subtítulos ─────────────────────────────────────────────
-  const [subtitlesOn, setSubtitlesOn] = useState(false);
-  const [interimText, setInterimText] = useState("");
-  const [finalText,   setFinalText]   = useState("");
-  const recognitionRef = useRef(null);
-
-  const toggleSubtitles = () => {
-    if (subtitlesOn) {
-      recognitionRef.current?.stop();
-      recognitionRef.current = null;
-      setInterimText("");
-      setFinalText("");
-      setSubtitlesOn(false);
-    } else {
-      recognitionRef.current = createTranscriptionService((text, isFinal) => {
-        if (isFinal) { setFinalText(text); setInterimText(""); }
-        else          { setInterimText(text); }
-      }, "es-ES");
-      setSubtitlesOn(true);
-    }
-  };
-
-  useEffect(() => {
-    return () => recognitionRef.current?.stop();
-  }, []);
 
   const _localVideoRef  = useRef(null);
   const _remoteVideoRef = useRef(null);
@@ -167,13 +141,11 @@ export default function VideoCall({
     setShowGifts(false);
     setActiveGift(gift);
     console.log("Regalo enviado durante llamada (mock):", gift);
-  };
-
-  const handleEnd = () => {
-    recognitionRef.current?.stop();
-    setStatus("ended");
-    onEnd?.();
-  };
+    };
+    const handleEnd = () => {
+  setStatus("ended");
+  onEnd?.();
+    };
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col overflow-hidden">
@@ -194,13 +166,6 @@ export default function VideoCall({
         />
       )}
 
-      {/* ── SUBTÍTULOS ── */}
-      <SubtitlesOverlay
-        interimText={interimText}
-        finalText={finalText}
-        isListening={subtitlesOn}
-        theme={theme}
-      />
 
       {/* ── BARRA SUPERIOR ── */}
       <div
@@ -270,19 +235,14 @@ export default function VideoCall({
         </button>
       </div>
 
-      {/* ── CONTROLES ── */}
-      <div className="absolute bottom-0 left-0 right-0 z-20">
-        <CallControls
-          muted={muted}
-          camOff={camOff}
-          subtitlesOn={subtitlesOn}
-          onToggleMute={() => setMuted(m => !m)}
-          onToggleCam={() => setCamOff(c => !c)}
-          onEnd={handleEnd}
-          onToggleSubtitles={toggleSubtitles}
-        />
-      </div>
-
+      <CallControls
+        muted={muted}
+        camOff={camOff}
+        onToggleMute={() => setMuted(m => !m)}
+        onToggleCam={() => setCamOff(c => !c)}
+        onEnd={handleEnd}
+      />
+      
       {/* ── PANEL DE REGALOS ── */}
       {showGifts && (
         <GiftPanel

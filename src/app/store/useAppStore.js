@@ -9,7 +9,8 @@ const useAppStore = create((set, get) => ({
   logout:     ()     => set({ user: null, isLoggedIn: false }),
   setLoading: (v)    => set({ isLoading: v }),
 
-  credits:     0,
+  // ✅ Créditos actuales (mock local)
+  credits:     100, // DESDE AQUI SE MANEJA EL CRÉDITO DEL USUARIO EN LA APP, PARA COMPRAS Y REGALOS
   setCredits:  (n) => set({ credits: n }),
   addCredits:  (n) => set((s) => ({ credits: Math.max(0, s.credits + n) })),
   spendCredits:(n) => {
@@ -27,3 +28,40 @@ const useAppStore = create((set, get) => ({
 }));
 
 export default useAppStore;
+
+/* 
+  ────────────────────────────────────────────────
+  ✅ FUTURO: Integración con backend
+  - Cuando tengas tu API lista, podés agregar funciones para sincronizar créditos:
+
+  const useAppStore = create((set, get) => ({
+    credits: 0,
+    setCredits: (n) => set({ credits: n }),
+    addCredits: (n) => set((s) => ({ credits: Math.max(0, s.credits + n) })),
+    spendCredits: (n) => { ... },
+
+    // 🔗 Acción para cargar créditos desde backend
+    fetchCredits: async () => {
+      try {
+        const res = await fetch('/api/wallet/credits');
+        const data = await res.json();
+        set({ credits: data.credits });
+      } catch (err) {
+        console.error('Error al cargar créditos', err);
+      }
+    },
+
+    // 🔗 Acción para comprar créditos (ejemplo)
+    buyCredits: async (packId) => {
+      try {
+        const res = await fetch(`/api/wallet/buy/${packId}`, { method: 'POST' });
+        const data = await res.json();
+        set({ credits: data.newBalance });
+      } catch (err) {
+        console.error('Error al comprar créditos', err);
+      }
+    },
+  }));
+
+  ────────────────────────────────────────────────
+*/

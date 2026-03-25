@@ -4,10 +4,10 @@ import { ROUTES } from '../../../constants/routes';
 import useAppStore from '../../../app/store/useAppStore';
 
 const PACKS = [
-  { id:1, credits:100,  price:'$4.99',  label:'Starter', bonus:null,         best:false },
-  { id:2, credits:300,  price:'$9.99',  label:'Popular', bonus:'+50 gratis',  best:true  },
-  { id:3, credits:700,  price:'$19.99', label:'Premium', bonus:'+200 gratis', best:false },
-  { id:4, credits:1500, price:'$39.99', label:'Elite',   bonus:'+600 gratis', best:false },
+  { id: 1, credits: 100,  price: '$4.99',  label: 'Starter', bonus: null,          best: false },
+  { id: 2, credits: 300,  price: '$9.99',  label: 'Popular', bonus: '+50 gratis',  best: true  },
+  { id: 3, credits: 700,  price: '$19.99', label: 'Premium', bonus: '+200 gratis', best: false },
+  { id: 4, credits: 1500, price: '$39.99', label: 'Elite',   bonus: '+600 gratis', best: false },
 ];
 
 export default function PaywallGate() {
@@ -24,39 +24,139 @@ export default function PaywallGate() {
   };
 
   return (
-    <div className="h-screen bg-[#09080f] flex flex-col overflow-hidden">
-      <div className="text-center pt-12 pb-6 px-6">
-        <div className="text-4xl mb-3">💎</div>
-        <h1 className="font-serif text-3xl text-[#ede8ff] font-semibold">Elegí tu pack</h1>
-        <p className="text-[#7a748f] text-sm mt-2">Para chatear necesitás créditos</p>
+    <div className="h-screen flex flex-col overflow-hidden relative" style={{ background: '#07060a' }}>
+
+      {/* Ambient gold glow top */}
+      <div
+        className="absolute inset-0 pointer-events-none z-0"
+        style={{
+          background: `
+            radial-gradient(ellipse 70% 35% at 50% 0%, rgba(212,170,60,0.22) 0%, transparent 70%),
+            radial-gradient(ellipse 50% 25% at 90% 100%, rgba(180,130,30,0.10) 0%, transparent 60%),
+            radial-gradient(ellipse 30% 20% at 10% 60%, rgba(212,170,60,0.06) 0%, transparent 60%)
+          `
+        }}
+      />
+
+      {/* Gold top line */}
+      <div
+        className="absolute top-0 left-0 right-0 z-10"
+        style={{
+          height: '3px',
+          background: 'linear-gradient(90deg, transparent 0%, #c9a84c 30%, #f5e27a 50%, #c9a84c 70%, transparent 100%)'
+        }}
+      />
+
+      {/* Header */}
+      <div className="relative z-10 text-center pt-11 pb-5 px-6">
+        <div
+          className="text-4xl mb-3 inline-block"
+          style={{ filter: 'drop-shadow(0 0 20px rgba(212,170,60,0.7)) drop-shadow(0 0 40px rgba(212,170,60,0.3))' }}
+        >
+          💎
+        </div>
+        <h1
+          className="text-3xl font-bold tracking-tight"
+          style={{
+            background: 'linear-gradient(160deg, #f5e27a 0%, #d4aa3c 40%, #c9a84c 65%, #a07820 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}
+        >
+          Elegí tu pack
+        </h1>
+
+        {/* Ornament */}
+        <div className="flex items-center justify-center gap-2 mt-3">
+          <div className="h-px w-10" style={{ background: 'linear-gradient(90deg, transparent, rgba(201,168,76,0.5))' }} />
+          <div className="w-1.5 h-1.5 rotate-45" style={{ background: '#c9a84c', opacity: 0.8 }} />
+          <div className="h-px w-10" style={{ background: 'linear-gradient(90deg, rgba(201,168,76,0.5), transparent)' }} />
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 flex flex-col gap-3">
-        {PACKS.map(p => (
-          <div
-            key={p.id}
-            onClick={() => setSel(p.id)}
-            className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all duration-200 ${sel === p.id ? 'border-[#c9a84c] bg-[rgba(201,168,76,.08)]' : 'border-[rgba(201,168,76,.14)] bg-[#1a1826]'}`}
-          >
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-[#ede8ff] text-[15px]">{p.label}</span>
-                {p.best && <span className="bg-[#c9a84c] text-[#09080f] text-[10px] font-bold px-2 py-0.5 rounded-full">MÁS POPULAR</span>}
+      {/* Pack list */}
+      <div className="relative z-10 flex-1 overflow-y-auto px-4 flex flex-col gap-2.5" style={{ scrollbarWidth: 'none' }}>
+        {PACKS.map(p => {
+          const isSelected = sel === p.id;
+          return (
+            <div
+              key={p.id}
+              onClick={() => setSel(p.id)}
+              className="relative flex items-center justify-between px-4 py-4 rounded-2xl cursor-pointer overflow-hidden transition-transform duration-200 hover:-translate-y-px"
+              style={{
+                border: isSelected ? '1px solid rgba(201,168,76,0.55)' : '1px solid rgba(201,168,76,0.13)',
+                background: isSelected
+                  ? 'linear-gradient(145deg, #1c1708, #14120a)'
+                  : 'linear-gradient(145deg, #141210, #0f0e0b)',
+                boxShadow: isSelected
+                  ? '0 0 0 1px rgba(245,226,122,0.15), inset 0 1px 0 rgba(245,226,122,0.12), 0 10px 40px rgba(0,0,0,0.5), 0 0 30px rgba(201,168,76,0.08)'
+                  : 'none',
+              }}
+            >
+              {/* Gold overlay on selected */}
+              {isSelected && (
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{ background: 'linear-gradient(135deg, rgba(201,168,76,0.08) 0%, transparent 55%)' }}
+                />
+              )}
+
+              <div className="flex-1 pr-3 relative z-10">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-base font-semibold" style={{ color: '#f0e8cc' }}>
+                    {p.label}
+                  </span>
+                  {p.best && (
+                    <span
+                      className="text-[9px] font-semibold tracking-widest uppercase px-2 py-0.5 rounded-full"
+                      style={{
+                        background: 'linear-gradient(135deg, #f5e27a 0%, #c9a84c 100%)',
+                        color: '#07060a',
+                      }}
+                    >
+                      Más popular
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5 mt-1 text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                  <span>💎 {p.credits} créditos</span>
+                  {p.bonus && <span className="text-green-400 font-medium">{p.bonus}</span>}
+                </div>
               </div>
-              <div className="text-sm text-[#7a748f] mt-0.5">
-                💎 {p.credits} créditos {p.bonus && <span className="text-green-400">{p.bonus}</span>}
+
+              <div
+                className="text-base font-semibold flex-shrink-0 relative z-10"
+                style={isSelected ? {
+                  background: 'linear-gradient(160deg, #f5e27a 0%, #d4aa3c 60%, #a87f20 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                } : { color: 'rgba(255,255,255,0.35)' }}
+              >
+                {p.price}
               </div>
             </div>
-            <div className="text-[#c9a84c] font-semibold text-[16px]">{p.price}</div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      <div className="p-5 pb-8">
+      {/* Footer button */}
+      <div className="relative z-10 px-4 pt-3 pb-8">
         <button
           onClick={handleBuy}
           disabled={!sel}
-          className={`w-full py-4 rounded-full font-semibold text-[15px] border-none transition-all duration-200 ${sel ? 'bg-gradient-to-r from-[#c9a84c] to-[#f0d882] text-[#09080f] cursor-pointer shadow-[0_8px_30px_rgba(201,168,76,.3)]' : 'bg-[#1a1826] text-[#7a748f] cursor-default'}`}
+          className="w-full py-4 rounded-full text-sm font-semibold tracking-widest uppercase border-none transition-all duration-200 relative overflow-hidden"
+          style={sel ? {
+            background: 'linear-gradient(135deg, #f5e27a 0%, #d4aa3c 45%, #c9a84c 75%, #a07820 100%)',
+            color: '#07060a',
+            boxShadow: '0 6px 28px rgba(201,168,76,0.4), 0 0 0 1px rgba(245,226,122,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
+          } : {
+            background: '#12100c',
+            color: 'rgba(201,168,76,0.3)',
+            border: '1px solid rgba(201,168,76,0.1)',
+            cursor: 'default',
+          }}
         >
           {sel ? 'Comprar ahora' : 'Seleccioná un pack'}
         </button>
