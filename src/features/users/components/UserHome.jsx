@@ -1,10 +1,10 @@
 // src/features/users/components/UserHome.jsx
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../../constants/routes';
 import useAppStore from '../../../app/store/useAppStore';
-import VideoCall from '../../calls/components/VideoCall';
-import GiftPanel from '../../chat/components/GiftPanel';
+import ChatScreen from '../../chat/components/ChatScreen';
+import PaywallGate from '../../wallet/components/PaywallGate';
 
 const GIRLS = [
   { name:"Valentina", age:21, emoji:"🌺", tags:["Empática","Cálida"],      vip:true,  online:true,  img:"https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80" },
@@ -31,10 +31,7 @@ const ANIM_CSS = `
   @keyframes gift-name-in{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:translateY(0)}}
 `;
 
-const nowTime = () => {
-  const d = new Date();
-  return `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
-};
+
 
 function GiftOverlay({ gift, onDone }) {
   const [phase, setPhase] = useState("in");
@@ -114,7 +111,7 @@ export default function UserHome() {
 
       <div className="flex-1 overflow-y-auto">
         {tab === 'home'    && <HomeTab onSelectGirl={setSelectedGirl} />}
-        {tab === 'credits' && <CreditsTab />}
+        {tab === 'credits' && <PaywallGate />}
         {tab === 'profile' && <ProfileTab onLogout={handleLogout} setTab={setTab} />}
       </div>
 
@@ -188,59 +185,6 @@ function HomeTab({ onSelectGirl }) {
   );
 }
 
-function CreditsTab() {
-  const { credits, addCredits } = useAppStore();
-  const [sel, setSel] = useState(null);
-
-  const packs = [
-    { id:1, credits:100,  price:'$4.99',  label:'Starter', bonus:null,         best:false },
-    { id:2, credits:300,  price:'$9.99',  label:'Popular', bonus:'+50 gratis',  best:true  },
-    { id:3, credits:700,  price:'$19.99', label:'Premium', bonus:'+200 gratis', best:false },
-    { id:4, credits:1500, price:'$39.99', label:'Elite',   bonus:'+600 gratis', best:false },
-  ];
-
-  const buy = () => {
-    if (!sel) return;
-    const p = packs.find(x => x.id === sel);
-    const bonus = p.bonus ? parseInt(p.bonus) : 0;
-    addCredits(p.credits + bonus);
-    setSel(null);
-  };
-
-  return (
-    <div className="px-4 pt-5 pb-8">
-      <div className="font-serif text-2xl font-semibold text-center mb-1 text-[#ede8ff]">Créditos</div>
-      <div className="text-sm text-[#7a748f] text-center mb-6">Saldo actual: 💎 {credits}</div>
-      <div className="flex flex-col gap-3 mb-6">
-        {packs.map(p => (
-          <div
-            key={p.id}
-            onClick={() => setSel(p.id)}
-            className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all duration-200 ${sel === p.id ? 'border-[#c9a84c] bg-[rgba(201,168,76,.08)]' : 'border-[rgba(201,168,76,.14)] bg-[#1a1826]'}`}
-          >
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-[#ede8ff] text-[15px]">{p.label}</span>
-                {p.best && <span className="bg-[#c9a84c] text-[#09080f] text-[10px] font-bold px-2 py-0.5 rounded-full">MÁS POPULAR</span>}
-              </div>
-              <div className="text-sm text-[#7a748f] mt-0.5">
-                💎 {p.credits} créditos {p.bonus && <span className="text-green-400">{p.bonus}</span>}
-              </div>
-            </div>
-            <div className="text-[#c9a84c] font-semibold text-[16px]">{p.price}</div>
-          </div>
-        ))}
-      </div>
-      <button
-        onClick={buy}
-        disabled={!sel}
-        className={`w-full py-4 rounded-full font-semibold text-[15px] border-none transition-all duration-200 ${sel ? 'bg-gradient-to-r from-[#c9a84c] to-[#f0d882] text-[#09080f] cursor-pointer shadow-[0_8px_30px_rgba(201,168,76,.3)]' : 'bg-[#1a1826] text-[#7a748f] cursor-default'}`}
-      >
-        {sel ? 'Comprar ahora' : 'Seleccioná un pack'}
-      </button>
-    </div>
-  );
-}
 
 function ProfileTab({ onLogout }) {
   const { credits } = useAppStore();
@@ -315,150 +259,6 @@ function ProfileTab({ onLogout }) {
       <p className="mt-8 text-[9px] text-[#423d57] text-center uppercase tracking-[3px]">
         Eva App v1.0.2
       </p>
-    </div>
-  );
-}
-
-function ChatScreen({ girl, onBack, credits, onSpend }) {
-  const [messages, setMessages] = useState([
-    { who:'them', text:`Hola 😊 Soy ${girl.name}, ¿cómo estás hoy?`, time:nowTime() }
-  ]);
-  const [input, setInput]       = useState('');
-  const [typing, setTyping]     = useState(false);
-  const [showVC, setShowVC]     = useState(false);
-  const [showGifts, setShowGifts] = useState(false);
-  const [activeGift, setActiveGift] = useState(null);
-  const aiRef     = useRef(0);
-  const bottomRef = useRef(null);
-
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:'smooth' }); }, [messages, typing]);
-
-  const send = () => {
-    if (!input.trim()) return;
-    const t = nowTime();
-    setMessages(m => [...m, { who:'me', text:input, time:t }]);
-    setInput('');
-    onSpend(2);
-    setTyping(true);
-    setTimeout(() => {
-      setTyping(false);
-      setMessages(m => [...m, { who:'them', text:AI_REPLIES[aiRef.current % AI_REPLIES.length], time:t }]);
-      aiRef.current++;
-    }, 1800);
-  };
-
-  const handleGiftSend = (gift) => {
-    const t = nowTime();
-    setMessages(m => [...m, {
-      who: 'me',
-      text: `${gift.emoji} ${gift.name}`,
-      time: t,
-      isGift: true,
-      giftColor: gift.color,
-    }]);
-    onSpend(gift.cost);
-    setActiveGift(gift);
-    setShowGifts(false);
-  };
-
-  if (showVC) return (
-    <VideoCall
-      creator={{ id: girl.name, name: girl.name, avatar: girl.img }}
-      user={{ id: 'user', name: 'Vos', credits: credits }}
-      onEnd={() => setShowVC(false)}
-      theme="dark"
-    />
-  );
-
-  return (
-    <div className="flex flex-col h-screen bg-[#09080f]" style={{ position: "relative" }}>
-      {activeGift && <GiftOverlay gift={activeGift} onDone={() => setActiveGift(null)} />}
-
-      <div className="flex items-center gap-3 py-3.5 px-4 bg-[#111018] border-b border-[rgba(201,168,76,.14)] shrink-0">
-        <button onClick={onBack} className="bg-transparent border-none text-[#ede8ff] text-2xl cursor-pointer leading-none">←</button>
-        <img src={girl.img} alt={girl.name} className="w-11 h-11 rounded-full object-cover border-2 border-[#c9a84c]" />
-        <div className="flex-1">
-          <div className="font-semibold text-base text-[#ede8ff]">{girl.name}</div>
-          <div className="text-xs text-green-400 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" style={{ animation:'blink 1.5s infinite' }} />
-            En línea
-          </div>
-        </div>
-        <button
-          onClick={() => setShowVC(true)}
-          className="bg-gradient-to-br from-[#c9a84c] to-[#f0d882] border-none rounded-full py-2 px-4 text-[#09080f] text-sm font-semibold cursor-pointer flex items-center gap-1.5"
-        >
-          📹 Video
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto py-4 px-4 flex flex-col gap-2.5">
-        {messages.map((m, i) => (
-          <div key={i} className={`max-w-[76%] ${m.who === 'me' ? 'self-end' : 'self-start'}`}>
-            {m.isGift ? (
-              <div style={{
-                display:"flex", flexDirection:"column", alignItems:"center",
-                padding:"10px 16px", borderRadius:"16px",
-                background:`${m.giftColor}22`, border:`1px solid ${m.giftColor}66`,
-                minWidth:"80px",
-              }}>
-                <span style={{ fontSize:"32px", lineHeight:1 }}>{m.text.split(" ")[0]}</span>
-                <span style={{ fontSize:"11px", color: m.giftColor, fontWeight:600, marginTop:"4px" }}>
-                  {m.text.split(" ").slice(1).join(" ")}
-                </span>
-              </div>
-            ) : (
-              <div className={`py-3 px-4 rounded-[20px] text-sm leading-relaxed ${m.who === 'me' ? 'bg-gradient-to-br from-[#c9a84c] to-[#f0d882] text-[#09080f] rounded-br-[4px]' : 'bg-[#1a1826] text-[#ede8ff] rounded-bl-[4px]'}`}>
-                {m.text}
-              </div>
-            )}
-            <div className={`text-[11px] text-[#7a748f] mt-1 px-1 ${m.who === 'me' ? 'text-right' : 'text-left'}`}>{m.time}</div>
-          </div>
-        ))}
-        {typing && (
-          <div className="self-start bg-[#1a1826] rounded-[20px] rounded-bl-[4px] py-3.5 px-4 flex gap-1 items-center">
-            {[0,1,2].map(i => (
-              <span key={i} className="w-2 h-2 rounded-full bg-[#7a748f] inline-block" style={{ animation:'ty 1.2s infinite', animationDelay:`${i * .2}s` }} />
-            ))}
-          </div>
-        )}
-        <div ref={bottomRef} />
-      </div>
-
-      <div className="text-center p-1.5 text-xs text-[#7a748f] bg-[#111018] border-t border-[rgba(201,168,76,.14)]">
-        💎 {credits} créditos · −2 por mensaje
-      </div>
-
-      {showGifts && (
-        <GiftPanel context="chat" onSend={handleGiftSend} onClose={() => setShowGifts(false)} />
-      )}
-
-      <div className="py-2.5 px-3.5 pb-5 bg-[#111018] border-t border-[rgba(201,168,76,.14)] flex gap-2.5 items-center shrink-0">
-        <button
-          onClick={() => setShowGifts(g => !g)}
-          style={{
-            background: showGifts ? "rgba(201,168,76,.3)" : "rgba(255,255,255,.08)",
-            border: showGifts ? "1px solid rgba(201,168,76,.6)" : "1px solid rgba(255,255,255,.1)",
-            borderRadius:"50%", width:"40px", height:"40px",
-            fontSize:"18px", cursor:"pointer", flexShrink:0,
-          }}
-        >
-          🎁
-        </button>
-        <input
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && send()}
-          placeholder="Escribí algo..."
-          className="flex-1 bg-[#1a1826] border border-[rgba(201,168,76,.14)] rounded-full py-3 px-4 text-[#ede8ff] text-sm outline-none"
-        />
-        <button
-          onClick={send}
-          className="w-11 h-11 rounded-full bg-gradient-to-br from-[#c9a84c] to-[#f0d882] border-none text-[#09080f] text-lg cursor-pointer flex items-center justify-center"
-        >
-          ➤
-        </button>
-      </div>
     </div>
   );
 }

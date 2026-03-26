@@ -1,170 +1,169 @@
-import { useState, useEffect, useRef } from "react";
-import MessageBubble from "./MessageBubble.jsx";
-import TypingIndicator from "./TypingIndicator.jsx";
-import GiftPanel from "./GiftPanel.jsx";
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '../../../constants/routes';
+import useAppStore from '../../../app/store/useAppStore';
+import VideoCall from '../../calls/components/VideoCall';
+import GiftPanel from './GiftPanel';
 
-// ── Keyframes animación regalo ──────────────────────────────
-const GIFT_KEYFRAMES = `
-  @keyframes gift-pop-in {
-    0%   { transform: translate(-50%, -50%) scale(0) rotate(-15deg); opacity: 0; }
-    60%  { transform: translate(-50%, -50%) scale(1.2) rotate(5deg);  opacity: 1; }
-    100% { transform: translate(-50%, -50%) scale(1)   rotate(0deg);  opacity: 1; }
-  }
-  @keyframes gift-pop-out {
-    0%   { transform: translate(-50%, -50%) scale(1);   opacity: 1; }
-    100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
-  }
-  @keyframes gift-name-in {
-    0%   { opacity: 0; transform: translateY(10px); }
-    100% { opacity: 1; transform: translateY(0); }
-  }
-`;
+const AI_REPLIES = [
+  "Qué lindo que me escribas 💜 ¿cómo fue tu día?",
+  "Te escucho, contame más 🌸",
+  "Eso suena difícil... estoy acá 💫",
+  "Me alegra que hablemos ✨",
+  "¿Y vos qué necesitás ahora mismo?",
+  "Tengo todo el tiempo para vos 🌺",
+];
 
-// ── Overlay animación regalo ────────────────────────────────
-function GiftOverlay({ gift, onDone }) {
-  const [phase, setPhase] = useState("in");
+const nowTime = () => {
+  const d = new Date();
+  return `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+};
 
-  useEffect(() => {
-    const t1 = setTimeout(() => setPhase("out"), 2000);
-    const t2 = setTimeout(() => onDone?.(), 2500);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  return (
-    <>
-      <style>{GIFT_KEYFRAMES}</style>
-      <div style={{
-        position: "fixed", inset: 0, zIndex: 60,
-        background: "rgba(0,0,0,0.45)", pointerEvents: "none",
-      }} />
-      <div style={{
-        position: "fixed", top: "50%", left: "50%", zIndex: 61,
-        display: "flex", flexDirection: "column",
-        alignItems: "center", gap: "12px", pointerEvents: "none",
-        animation: phase === "in"
-          ? "gift-pop-in 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards"
-          : "gift-pop-out 0.5s ease-in forwards",
-      }}>
-        <span style={{
-          fontSize: "120px", lineHeight: 1,
-          filter: `drop-shadow(0 0 40px ${gift.color})`,
-        }}>
-          {gift.emoji}
-        </span>
-        <div style={{
-          background: `${gift.color}22`,
-          border: `1px solid ${gift.color}88`,
-          borderRadius: "24px", padding: "6px 20px",
-          color: "#fff", fontSize: "16px", fontWeight: 600,
-          animation: "gift-name-in 0.4s ease-out 0.3s both",
-        }}>
-          {gift.name}
-        </div>
-      </div>
-    </>
-  );
-}
-
-// ── ChatScreen ──────────────────────────────────────────────
-export default function ChatScreen({ context = "chat", theme = "dark" }) {
+export default function ChatScreen({ girl, onBack }) {
+  const navigate = useNavigate();
+  const { credits, spendCredits } = useAppStore();
   const [messages, setMessages] = useState([
-    { id: 1, who: "them", sender: "them", text: "Hola 👋", time: "10:23" },
-    { id: 2, who: "me",   sender: "me",   text: "Hola! 😄", time: "10:24" },
+    { who:'them', text:`Hola 😊 Soy ${girl.name}, ¿cómo estás hoy?`, time:nowTime() }
   ]);
-  const [input, setInput]         = useState("");
-  const [isTyping, setIsTyping]   = useState(false);
+  const [input, setInput]         = useState('');
+  const [typing, setTyping]       = useState(false);
+  const [showVC, setShowVC]       = useState(false);
   const [showGifts, setShowGifts] = useState(false);
-  const [activeGift, setActiveGift] = useState(null);
+  const aiRef     = useRef(0);
   const bottomRef = useRef(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    bottomRef.current?.scrollIntoView({ behavior:'smooth' });
+  }, [messages, typing]);
 
-  const handleSend = () => {
+  const send = () => {
     if (!input.trim()) return;
-    const newMsg = { id: Date.now(), who: "me", sender: "me", text: input, time: "10:25" };
-    setMessages(prev => [...prev, newMsg]);
-    setInput("");
-    setIsTyping(true);
+    const t = nowTime();
+    setMessages(m => [...m, { who:'me', text:input, time:t }]);
+    setInput('');
+    spendCredits(2);
+    setTyping(true);
     setTimeout(() => {
-      setMessages(prev => [
-        ...prev,
-        { id: Date.now() + 1, who: "them", sender: "them", text: "¡Qué interesante! 🔥", time: "10:26" },
-      ]);
-      setIsTyping(false);
-    }, 1500);
+      setTyping(false);
+      setMessages(m => [...m, { who:'them', text:AI_REPLIES[aiRef.current % AI_REPLIES.length], time:t }]);
+      aiRef.current++;
+    }, 1800);
   };
 
   const handleGiftSend = (gift) => {
-    // Agregar mensaje de regalo al chat
-    setMessages(prev => [...prev, {
-      id: Date.now(),
-      who: "me",
-      sender: "me",
-      type: "gift",
+    const t = nowTime();
+    setMessages(m => [...m, {
+      who: 'me',
       text: `${gift.emoji} ${gift.name}`,
+      time: t,
+      isGift: true,
       giftColor: gift.color,
-      time: "now",
     }]);
-    setActiveGift(gift);   // dispara el overlay
+    spendCredits(gift.cost);
     setShowGifts(false);
   };
 
-  return (
-    <div className="flex flex-col h-screen bg-[#09080f] text-[#ede8ff]" style={{ position: "relative" }}>
+  // ── Upsell en el momento de valor ──
+  if (showVC) return (
+    <VideoCall
+      creator={{ id: girl.name, name: girl.name, avatar: girl.img }}
+      user={{ id: 'user', name: 'Vos', credits }}
+      onEnd={() => navigate(ROUTES.PAYWALL)}
+      theme="dark"
+    />
+  );
 
-      {/* Overlay animación regalo */}
-      {activeGift && (
-        <GiftOverlay gift={activeGift} onDone={() => setActiveGift(null)} />
-      )}
+  return (
+    <div className="flex flex-col h-screen bg-[#09080f]" style={{ position:"relative" }}>
+
+      {/* Header */}
+      <div className="flex items-center gap-3 py-3.5 px-4 bg-[#111018] border-b border-[rgba(201,168,76,.14)] shrink-0">
+        <button onClick={onBack} className="bg-transparent border-none text-[#ede8ff] text-2xl cursor-pointer leading-none">←</button>
+        <img src={girl.img} alt={girl.name} className="w-11 h-11 rounded-full object-cover border-2 border-[#c9a84c]" />
+        <div className="flex-1">
+          <div className="font-semibold text-base text-[#ede8ff]">{girl.name}</div>
+          <div className="text-xs text-green-400 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" style={{ animation:'blink 1.5s infinite' }} />
+            En línea
+          </div>
+        </div>
+        <button
+          onClick={() => setShowVC(true)}
+          className="bg-gradient-to-br from-[#c9a84c] to-[#f0d882] border-none rounded-full py-2 px-4 text-[#09080f] text-sm font-semibold cursor-pointer flex items-center gap-1.5"
+        >
+          📹 Llamada
+        </button>
+      </div>
 
       {/* Mensajes */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {messages.map((m) => (
-          <MessageBubble key={m.id} message={m} theme={theme} />
+      <div className="flex-1 overflow-y-auto py-4 px-4 flex flex-col gap-2.5">
+        {messages.map((m, i) => (
+          <div key={i} className={`max-w-[76%] ${m.who === 'me' ? 'self-end' : 'self-start'}`}>
+            {m.isGift ? (
+              <div style={{
+                display:"flex", flexDirection:"column", alignItems:"center",
+                padding:"10px 16px", borderRadius:"16px",
+                background:`${m.giftColor}22`, border:`1px solid ${m.giftColor}66`,
+                minWidth:"80px",
+              }}>
+                <span style={{ fontSize:"32px", lineHeight:1 }}>{m.text.split(" ")[0]}</span>
+                <span style={{ fontSize:"11px", color:m.giftColor, fontWeight:600, marginTop:"4px" }}>
+                  {m.text.split(" ").slice(1).join(" ")}
+                </span>
+              </div>
+            ) : (
+              <div className={`py-3 px-4 rounded-[20px] text-sm leading-relaxed ${m.who === 'me' ? 'bg-gradient-to-br from-[#c9a84c] to-[#f0d882] text-[#09080f] rounded-br-[4px]' : 'bg-[#1a1826] text-[#ede8ff] rounded-bl-[4px]'}`}>
+                {m.text}
+              </div>
+            )}
+            <div className={`text-[11px] text-[#7a748f] mt-1 px-1 ${m.who === 'me' ? 'text-right' : 'text-left'}`}>{m.time}</div>
+          </div>
         ))}
-        {isTyping && <TypingIndicator theme={theme} />}
+        {typing && (
+          <div className="self-start bg-[#1a1826] rounded-[20px] rounded-bl-[4px] py-3.5 px-4 flex gap-1 items-center">
+            {[0,1,2].map(i => (
+              <span key={i} className="w-2 h-2 rounded-full bg-[#7a748f] inline-block" style={{ animation:'ty 1.2s infinite', animationDelay:`${i*.2}s` }} />
+            ))}
+          </div>
+        )}
         <div ref={bottomRef} />
+      </div>
+
+      {/* Créditos */}
+      <div className="text-center p-1.5 text-xs text-[#7a748f] bg-[#111018] border-t border-[rgba(201,168,76,.14)]">
+        💎 {credits} créditos · −2 por mensaje
       </div>
 
       {/* Gift Panel */}
       {showGifts && (
-        <GiftPanel
-          context={context}
-          onSend={handleGiftSend}
-          onClose={() => setShowGifts(false)}
-        />
+        <GiftPanel context="chat" onSend={handleGiftSend} onClose={() => setShowGifts(false)} />
       )}
 
       {/* Input */}
-      <div className="p-4 flex gap-2 border-t border-[#1f1d2b]">
-        {/* Botón regalos */}
+      <div className="py-2.5 px-3.5 pb-5 bg-[#111018] border-t border-[rgba(201,168,76,.14)] flex gap-2.5 items-center shrink-0">
         <button
           onClick={() => setShowGifts(g => !g)}
           style={{
             background: showGifts ? "rgba(201,168,76,.3)" : "rgba(255,255,255,.08)",
-            border: showGifts ? "1px solid rgba(201,168,76,.6)" : "1px solid transparent",
-            borderRadius: "50%", width: "40px", height: "40px",
-            fontSize: "18px", cursor: "pointer", flexShrink: 0,
+            border: showGifts ? "1px solid rgba(201,168,76,.6)" : "1px solid rgba(255,255,255,.1)",
+            borderRadius:"50%", width:"40px", height:"40px",
+            fontSize:"18px", cursor:"pointer", flexShrink:0,
           }}
         >
           🎁
         </button>
-
         <input
-          type="text"
-          className="flex-1 rounded-lg bg-[#1f1d2b] px-3 py-2 text-[#ede8ff] focus:outline-none"
-          placeholder="Escribe un mensaje..."
           value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && send()}
+          placeholder="Escribí algo..."
+          className="flex-1 bg-[#1a1826] border border-[rgba(201,168,76,.14)] rounded-full py-3 px-4 text-[#ede8ff] text-sm outline-none"
         />
         <button
-          onClick={handleSend}
-          className="bg-[#7c3aed] px-4 py-2 rounded-lg text-white hover:bg-[#6d28d9]"
+          onClick={send}
+          className="w-11 h-11 rounded-full bg-gradient-to-br from-[#c9a84c] to-[#f0d882] border-none text-[#09080f] text-lg cursor-pointer flex items-center justify-center"
         >
-          Enviar
+          ➤
         </button>
       </div>
     </div>

@@ -16,5 +16,4 @@ export const ROUTES = {
   CREATOR_EARN:    '/creator/earnings',
   CREATOR_PROFILE: '/creator/profile',
   CREATOR_VERIFY:  '/creator/verify',
-  VIDEO_CALL: '/videocall',
 };

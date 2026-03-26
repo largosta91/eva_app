@@ -9,7 +9,7 @@ import SplashScreen from '../features/auth/components/SplashScreen';
 import LoginForm from '../features/auth/components/LoginForm';
 import RegisterForm from '../features/auth/components/RegisterForm';
 import VerifyScreen from '../features/auth/components/VerifyScreen';
-import PaywallGate from '../features/auth/components/PaywallGate';
+import PaywallGate from '../features/wallet/components/PaywallGate';
 import UserHome from '../features/users/components/UserHome';
 import CreatorHome from '../features/creators/components/CreatorHome';
 import JoinCreator from '../features/auth/components/JoinCreator';
