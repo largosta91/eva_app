@@ -19,9 +19,34 @@ const nowTime = () => {
   return `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
 };
 
+// --- Función Auxiliar LibreTranslate ---
+// --- Función Auxiliar LibreTranslate ---
+const fetchTranslation = async (text) => {
+  try {
+    const res = await fetch("https://libretranslate.de/translate", {
+      method: "POST",
+      body: JSON.stringify({
+        q: text,
+        source: "auto",
+        target: "es", 
+        format: "text"
+      }),
+      headers: { "Content-Type": "application/json" }
+    });
+    const data = await res.json();
+    return data.translatedText || text;
+  } catch { // <--- Simplemente borrá la (e), así ESLint no molesta
+    return text;
+  }
+};
+
 export default function ChatScreen({ girl, onBack }) {
   const navigate = useNavigate();
   const { credits, spendCredits } = useAppStore();
+  
+  // Nuevo estado para controlar si la traducción está activa
+  const [translateEnabled, setTranslateEnabled] = useState(false);
+
   const [messages, setMessages] = useState([
     { who:'them', text:`Hola 😊 Soy ${girl.name}, ¿cómo estás hoy?`, time:nowTime() }
   ]);
@@ -36,16 +61,33 @@ export default function ChatScreen({ girl, onBack }) {
     bottomRef.current?.scrollIntoView({ behavior:'smooth' });
   }, [messages, typing]);
 
-  const send = () => {
+  const send = async () => {
     if (!input.trim()) return;
     const t = nowTime();
+    
+    // Mensaje del usuario
     setMessages(m => [...m, { who:'me', text:input, time:t }]);
     setInput('');
     spendCredits(2);
     setTyping(true);
-    setTimeout(() => {
+
+    // Simulación de respuesta de la IA
+    setTimeout(async () => {
+      const originalText = AI_REPLIES[aiRef.current % AI_REPLIES.length];
+      let finalDisplay = originalText;
+
+      // Si la traducción está activa, traducimos antes de mostrar
+      if (translateEnabled) {
+        finalDisplay = await fetchTranslation(originalText);
+      }
+
       setTyping(false);
-      setMessages(m => [...m, { who:'them', text:AI_REPLIES[aiRef.current % AI_REPLIES.length], time:t }]);
+      setMessages(m => [...m, { 
+        who:'them', 
+        text: originalText, 
+        translated: translateEnabled ? finalDisplay : null,
+        time: t 
+      }]);
       aiRef.current++;
     }, 1800);
   };
@@ -63,7 +105,6 @@ export default function ChatScreen({ girl, onBack }) {
     setShowGifts(false);
   };
 
-  // ── Upsell en el momento de valor ──
   if (showVC) return (
     <VideoCall
       creator={{ id: girl.name, name: girl.name, avatar: girl.img }}
@@ -76,22 +117,26 @@ export default function ChatScreen({ girl, onBack }) {
   return (
     <div className="flex flex-col h-screen bg-[#09080f]" style={{ position:"relative" }}>
 
-      {/* Header */}
+      {/* Header mejorado con Switch de Traducción */}
       <div className="flex items-center gap-3 py-3.5 px-4 bg-[#111018] border-b border-[rgba(201,168,76,.14)] shrink-0">
         <button onClick={onBack} className="bg-transparent border-none text-[#ede8ff] text-2xl cursor-pointer leading-none">←</button>
         <img src={girl.img} alt={girl.name} className="w-11 h-11 rounded-full object-cover border-2 border-[#c9a84c]" />
         <div className="flex-1">
           <div className="font-semibold text-base text-[#ede8ff]">{girl.name}</div>
-          <div className="text-xs text-green-400 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" style={{ animation:'blink 1.5s infinite' }} />
-            En línea
+          <div className="flex items-center gap-2">
+             <button 
+                onClick={() => setTranslateEnabled(!translateEnabled)}
+                className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${translateEnabled ? 'bg-[#c9a84c] text-black border-[#c9a84c]' : 'text-[#7a748f] border-[#7a748f]'}`}
+             >
+               {translateEnabled ? 'Traducción ON' : 'Traducción OFF'}
+             </button>
           </div>
         </div>
         <button
           onClick={() => setShowVC(true)}
           className="bg-gradient-to-br from-[#c9a84c] to-[#f0d882] border-none rounded-full py-2 px-4 text-[#09080f] text-sm font-semibold cursor-pointer flex items-center gap-1.5"
         >
-          📹 Llamada
+          📹
         </button>
       </div>
 
@@ -113,7 +158,13 @@ export default function ChatScreen({ girl, onBack }) {
               </div>
             ) : (
               <div className={`py-3 px-4 rounded-[20px] text-sm leading-relaxed ${m.who === 'me' ? 'bg-gradient-to-br from-[#c9a84c] to-[#f0d882] text-[#09080f] rounded-br-[4px]' : 'bg-[#1a1826] text-[#ede8ff] rounded-bl-[4px]'}`}>
-                {m.text}
+                {/* Muestra el texto traducido si existe y la opción está activa, sino el original */}
+                {m.who === 'them' && translateEnabled && m.translated ? m.translated : m.text}
+                
+                {/* Opcional: Pequeña marca si el mensaje es traducido */}
+                {m.who === 'them' && translateEnabled && m.translated && (
+                  <div className="text-[9px] opacity-50 mt-1 italic">Traducido por EVA</div>
+                )}
               </div>
             )}
             <div className={`text-[11px] text-[#7a748f] mt-1 px-1 ${m.who === 'me' ? 'text-right' : 'text-left'}`}>{m.time}</div>
@@ -129,17 +180,15 @@ export default function ChatScreen({ girl, onBack }) {
         <div ref={bottomRef} />
       </div>
 
-      {/* Créditos */}
+      {/* ... Resto del componente (Créditos, Gift Panel, Input) se mantiene igual ... */}
       <div className="text-center p-1.5 text-xs text-[#7a748f] bg-[#111018] border-t border-[rgba(201,168,76,.14)]">
         💎 {credits} créditos · −2 por mensaje
       </div>
 
-      {/* Gift Panel */}
       {showGifts && (
         <GiftPanel context="chat" onSend={handleGiftSend} onClose={() => setShowGifts(false)} />
       )}
 
-      {/* Input */}
       <div className="py-2.5 px-3.5 pb-5 bg-[#111018] border-t border-[rgba(201,168,76,.14)] flex gap-2.5 items-center shrink-0">
         <button
           onClick={() => setShowGifts(g => !g)}

@@ -1,5 +1,5 @@
 ﻿import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ROUTES } from '../../../constants/routes';
 import useAppStore from '../../../app/store/useAppStore';
 
@@ -12,19 +12,49 @@ const PACKS = [
 
 export default function PaywallGate() {
   const navigate   = useNavigate();
+  const location   = useLocation();
   const setCredits = useAppStore(s => s.setCredits);
   const [sel, setSel] = useState(null);
+
+  // ─── BACK: cuando navegues acá desde VideoCall, pasá el estado así: ──────────
+  // navigate(ROUTES.PAYWALL, { state: { fromCall: true, girlId: girl.id } })
+  // ─────────────────────────────────────────────────────────────────────────────
+  const _fromCall = location.state?.fromCall ?? false;
+  const _girlId   = location.state?.girlId   ?? null;
 
   const handleBuy = () => {
     if (!sel) return;
     const pack  = PACKS.find(p => p.id === sel);
     const bonus = pack.bonus ? parseInt(pack.bonus) : 0;
+
+    // TODO BACK: reemplazar por llamada real al backend:
+    // await paymentService.purchase(pack.id)
+    // await walletService.getBalance() → actualizar créditos desde el server
     setCredits(pack.credits + bonus);
+
+    // TODO BACK: si vino de una llamada → volver a esa llamada después de pagar:
+    // if (fromCall && girlId) {
+    //   navigate(ROUTES.VIDEO_CALL, { state: { girlId } });
+    //   return;
+    // }
+    navigate(ROUTES.USER_HOME);
+  };
+
+  const handleBack = () => {
+    // Siempre va a UserHome al cancelar — nunca vuelve a la llamada sin pagar
     navigate(ROUTES.USER_HOME);
   };
 
   return (
     <div className="h-screen flex flex-col overflow-hidden relative" style={{ background: '#07060a' }}>
+
+      {/* Botón volver — siempre a UserHome, nunca a la llamada sin pagar */}
+      <button
+        onClick={handleBack}
+        className="absolute top-11 left-4 z-20 text-[#7a748f] hover:text-[#c9a84c] transition-colors text-3xl bg-transparent border-none cursor-pointer"
+      >
+        ‹
+      </button>
 
       {/* Ambient gold glow top */}
       <div
