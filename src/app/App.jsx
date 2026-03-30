@@ -1,3 +1,4 @@
+// 📁 src/app/App.jsx
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ROUTES } from '../constants/routes';
@@ -13,7 +14,8 @@ import PaywallGate from '../features/wallet/components/PaywallGate';
 import UserHome from '../features/users/components/UserHome';
 import CreatorHome from '../features/creators/components/CreatorHome';
 import JoinCreator from '../features/auth/components/JoinCreator';
-
+import CreatorChatScreen from '../features/creators/components/CreatorChatScreen';
+import CreatorVideoCall from '../features/creators/components/CreatorVideoCall';
 
 // Stubs temporales — los vamos reemplazando de a uno
 function Placeholder({ name }) {
@@ -55,13 +57,16 @@ export default function App() {
             <Route path={ROUTES.JOIN}      element={<JoinCreator />} />
             <Route path={ROUTES.PAYWALL}   element={<PaywallGate />} />
 
+            {/* ── USUARIO ── */}
             <Route path={ROUTES.USER_HOME}    element={<ProtectedRoute requiredRole={ROLES.USER}><UserHome /></ProtectedRoute>} />
             <Route path={ROUTES.USER_CREDITS} element={<ProtectedRoute requiredRole={ROLES.USER}><Placeholder name="Créditos" /></ProtectedRoute>} />
             <Route path={ROUTES.USER_PROFILE} element={<ProtectedRoute requiredRole={ROLES.USER}><Placeholder name="Perfil Usuario" /></ProtectedRoute>} />
             <Route path={ROUTES.USER_CHAT}    element={<ProtectedRoute requiredRole={ROLES.USER}><Placeholder name="Chat" /></ProtectedRoute>} />
 
-            <Route path={ROUTES.CREATOR_HOME} element={<ProtectedRoute requiredRole={ROLES.CREATOR}><CreatorHome /></ProtectedRoute>} />
-            <Route path={ROUTES.CREATOR_CHATS}   element={<ProtectedRoute requiredRole={ROLES.CREATOR}><Placeholder name="Chats Creadora" /></ProtectedRoute>} />
+            {/* ── CREADORA ── */}
+            <Route path={ROUTES.CREATOR_HOME}    element={<ProtectedRoute requiredRole={ROLES.CREATOR}><CreatorHome /></ProtectedRoute>} />
+            <Route path={ROUTES.CREATOR_CHAT}    element={<ProtectedRoute requiredRole={ROLES.CREATOR}><CreatorChatScreen /></ProtectedRoute>} />
+            <Route path={ROUTES.CREATOR_CALL}    element={<ProtectedRoute requiredRole={ROLES.CREATOR}><CreatorVideoCall /></ProtectedRoute>} />
             <Route path={ROUTES.CREATOR_EARN}    element={<ProtectedRoute requiredRole={ROLES.CREATOR}><Placeholder name="Ganancias" /></ProtectedRoute>} />
             <Route path={ROUTES.CREATOR_PROFILE} element={<ProtectedRoute requiredRole={ROLES.CREATOR}><Placeholder name="Perfil Creadora" /></ProtectedRoute>} />
             <Route path={ROUTES.CREATOR_VERIFY}  element={<ProtectedRoute requiredRole={ROLES.CREATOR}><Placeholder name="Verificación KYC" /></ProtectedRoute>} />

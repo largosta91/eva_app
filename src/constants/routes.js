@@ -1,3 +1,4 @@
+// 📁 src/constants/routes.js
 export const ROUTES = {
   SPLASH:      '/',
   LOGIN:       '/login',
@@ -12,7 +13,8 @@ export const ROUTES = {
   USER_CHAT:    '/app/chat/:id',
 
   CREATOR_HOME:    '/creator/home',
-  CREATOR_CHATS:   '/creator/chats',
+  CREATOR_CHAT:    '/creator/chat/:id',
+  CREATOR_CALL:    '/creator/call/:id',
   CREATOR_EARN:    '/creator/earnings',
   CREATOR_PROFILE: '/creator/profile',
   CREATOR_VERIFY:  '/creator/verify',

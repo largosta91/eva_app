@@ -16,7 +16,6 @@ const fetchTranslation = async (text) => {
       }),
       headers: { "Content-Type": "application/json" }
     });
-
     const data = await res.json();
     return data.translatedText || text;
   } catch {
@@ -24,15 +23,13 @@ const fetchTranslation = async (text) => {
   }
 };
 
-export default function MiniChat({ theme = "dark", onClose }) {
+export default function MiniChat({ theme = "dark", onClose, role = "user" }) {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [showGiftPanel, setShowGiftPanel] = useState(false);
   const [translateEnabled, setTranslateEnabled] = useState(false);
 
   const bottomRef = useRef(null);
-
-  // ✅ REF que siempre tiene el valor actual del traductor
   const translateRef = useRef(translateEnabled);
 
   useEffect(() => {
@@ -47,7 +44,6 @@ export default function MiniChat({ theme = "dark", onClose }) {
     const currentInput = text.trim();
     if (!currentInput) return;
 
-    // 1️⃣ Mensaje del usuario
     setMessages(prev => [
       ...prev,
       { id: Date.now(), text: currentInput, sender: "me" }
@@ -55,29 +51,17 @@ export default function MiniChat({ theme = "dark", onClose }) {
 
     setText("");
 
-    // 2️⃣ Respuesta simulada
     setTimeout(async () => {
       const aiResponse = "I am so glad you are here!";
-      
-      console.log("Estado traductor ACTUAL:", translateRef.current);
-
       let finalMsg = aiResponse;
 
-      // ✅ usa el REF (estado siempre actualizado)
       if (translateRef.current) {
-        console.log("Traducción activa, llamando API...");
         finalMsg = await fetchTranslation(aiResponse);
-      } else {
-        console.log("Traducción OFF, enviando original.");
       }
 
       setMessages(prev => [
         ...prev,
-        {
-          id: Date.now() + 1,
-          text: finalMsg,
-          sender: "them"
-        }
+        { id: Date.now() + 1, text: finalMsg, sender: "them" }
       ]);
     }, 1000);
   };
@@ -89,11 +73,7 @@ export default function MiniChat({ theme = "dark", onClose }) {
   const handleGiftSend = (gift) => {
     setMessages(prev => [
       ...prev,
-      {
-        id: Date.now(),
-        text: `${gift.emoji} ${gift.name}`,
-        sender: "me"
-      }
+      { id: Date.now(), text: `${gift.emoji} ${gift.name}`, sender: "me" }
     ]);
     setShowGiftPanel(false);
   };
@@ -147,16 +127,9 @@ export default function MiniChat({ theme = "dark", onClose }) {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <span
-            style={{
-              color: "rgba(255,255,255,.6)",
-              fontSize: "11px",
-              fontWeight: 600,
-            }}
-          >
+          <span style={{ color: "rgba(255,255,255,.6)", fontSize: "11px", fontWeight: 600 }}>
             💬 Chat
           </span>
-
           <button
             onClick={() => setTranslateEnabled(prev => !prev)}
             style={{
@@ -221,15 +194,19 @@ export default function MiniChat({ theme = "dark", onClose }) {
           ➤
         </button>
 
-        <button
-          onClick={() => setShowGiftPanel(!showGiftPanel)}
-          style={btnStyle}
-        >
-          🎁
-        </button>
+        {/* Solo el hombre ve el botón de regalo */}
+        {role === "user" && (
+          <button
+            onClick={() => setShowGiftPanel(!showGiftPanel)}
+            style={btnStyle}
+          >
+            🎁
+          </button>
+        )}
       </div>
 
-      {showGiftPanel && (
+      {/* Solo el hombre puede abrir el panel de regalos */}
+      {showGiftPanel && role === "user" && (
         <GiftPanel
           context="chat"
           onSend={handleGiftSend}
