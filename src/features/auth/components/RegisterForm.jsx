@@ -1,15 +1,20 @@
+// src/features/auth/components/RegisterForm.jsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../../constants/routes';
+import useAppStore from '../../../app/store/useAppStore';
 
 export default function RegisterForm() {
   const navigate = useNavigate();
+  const setUser = useAppStore(s => s.setUser);
   const [form, setForm] = useState({ name: '', email: '', password: '' });
 
   const handleChange = (e) => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
 
   const handleRegister = () => {
-    navigate(ROUTES.VERIFY);
+    // BACKEND: reemplazar con llamada a API de registro
+    setUser({ id: '1', name: form.name, role: 'user' });
+    navigate(ROUTES.USER_HOME);
   };
 
   return (
@@ -22,11 +27,11 @@ export default function RegisterForm() {
         <div className="text-center">
           <div
             className="font-serif text-4xl font-semibold mb-1"
-            style={{ background: 'linear-gradient(135deg,#c9a84c,#f0d882)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}
-          >
+            style={{ background: 'linear-gradient(135deg,#8b3a9c,#c9a84c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}
+          > 
             Eva
           </div>
-          <p className="text-[#7a748f] text-sm">Creá tu cuenta</p>
+          <p className="text-[#c9a84c] text-sm">Creá tu cuenta</p>
         </div>
 
         <div className="flex flex-col gap-3">
@@ -64,12 +69,12 @@ export default function RegisterForm() {
 
         <div className="text-center text-sm text-[#5a5470]">
           ¿Ya tenés cuenta?{' '}
-          <span
-            className="text-[#c9a84c] cursor-pointer"
+          <button
             onClick={() => navigate(ROUTES.LOGIN)}
-          >
+            className="text-[#c9a84c] bg-transparent border-none cursor-pointer text-sm p-0"
+            >
             Iniciá sesión
-          </span>
+            </button>
         </div>
 
       </div>

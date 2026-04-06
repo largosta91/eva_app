@@ -74,10 +74,27 @@ export default function UserHome() {
 
       {/* TOP BAR */}
       <div className="grid grid-cols-3 items-center py-3.5 px-5 bg-[#111018] border-b border-[rgba(201,168,76,.14)] shrink-0">
-        <div></div>
-        <span className="font-serif text-3xl font-semibold bg-gradient-to-br from-[#8b3a9c] to-[#c9a84c] bg-clip-text text-transparent text-center whitespace-nowrap">
-          Eva
-        </span>
+        <div className="flex items-center justify-start">
+          <div className="w-9 h-9 rounded-full p-[1.5px] bg-gradient-to-br from-[#8b3a9c] to-[#c9a84c]">
+            <div className="w-full h-full rounded-full p-[1.5px] bg-[#111018] overflow-hidden">
+              <div
+                className="w-full h-full rounded-full"
+                style={{
+                  backgroundImage: 'url(/logo.png)',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center 25%',
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-center">
+          <span className="font-serif text-3xl font-semibold bg-gradient-to-br from-[#8b3a9c] to-[#c9a84c] bg-clip-text text-transparent whitespace-nowrap">
+            Eva
+          </span>
+        </div>
+
         <div className="flex justify-end">
           <div className="flex items-center gap-1.5 bg-[#1a1826] border border-[rgba(201,168,76,.14)] rounded-full py-2 px-4 text-sm font-medium text-[#c9a84c] cursor-pointer">
             💎 {credits}
@@ -94,19 +111,39 @@ export default function UserHome() {
       </div>
 
       {/* TAB BAR */}
-      <div className="flex bg-[#111018] border-t border-[rgba(201,168,76,.14)] pt-2.5 pb-5 shrink-0">
+      <div className="flex bg-[#111018] border-t border-[rgba(201,168,76,.14)] pt-2.5 pb-6 shrink-0">
         {[
           { key: 'home',    icon: '🔥', label: 'Explorar' },
           { key: 'chats',   icon: '💬', label: 'Chats'    },
-          { key: 'credits', icon: '👑', label: 'Premium'  },
+          { key: 'credits', icon: '/blackAppel.png', label: 'Eva Gold' },
           { key: 'profile', icon: '👤', label: 'Perfil'   },
         ].map(t => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`flex-1 flex flex-col items-center gap-1 text-[10px] font-medium uppercase tracking-wider bg-transparent border-none cursor-pointer transition-colors duration-200 ${tab === t.key ? 'text-[#c9a84c]' : 'text-[#7a748f]'}`}
+            className={`flex-1 flex flex-col items-center justify-center gap-1 bg-transparent border-none cursor-pointer transition-all duration-200 ${
+              tab === t.key ? 'text-[#c9a84c]' : 'text-[#7a748f]'
+            }`}
           >
-            <span className="text-2xl">{t.icon}</span>{t.label}
+            {/* Subimos la altura a h-10 para que la manzana pueda ser más grande */}
+            <div className="h-10 flex items-center justify-center">
+              {t.key === 'credits' ? (
+                <img 
+                  src={t.icon} 
+                  alt="Eva Gold" 
+                  /* Agrandamos a w-9 h-9 (36px) */
+                  className={`w-9 h-9 object-contain transition-transform duration-200 ${
+                    tab === t.key ? 'scale-110 opacity-100' : 'opacity-60'
+                  }`} 
+                />
+              ) : (
+                /* Subimos un pelín el texto a 3xl para que no se vea chico al lado de la manzana */
+                <span className="text-3xl leading-none">{t.icon}</span>
+              )}
+            </div>
+            <span className="text-[10px] font-medium uppercase tracking-wider">
+              {t.label}
+            </span>
           </button>
         ))}
       </div>

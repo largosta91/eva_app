@@ -22,7 +22,7 @@ export default function JoinCreator() {
       setStep('invalid');
       setTimeout(() => navigate(ROUTES.SPLASH, { replace: true }), 2000);
     }
-  }, [token]);
+  }, [token, navigate]);
 
   const handleChange = (e) => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
 

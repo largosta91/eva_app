@@ -3,16 +3,16 @@ import { create } from 'zustand';
 
 //FUNCIONES PARA MENEJAR A LAS CREADORAS OSEA MUJERES
 
-//const useAppStore = create((set, get) => ({
-//  user:       { id: 'mock_creator_1', name: 'Sofía', role: 'creator' },
-// isLoggedIn: true,
-// isLoading:  true,
-
-// ✅ Funciones para manejo de usuario HOMBRE OSEA USER
 const useAppStore = create((set, get) => ({
- user:       null,
- isLoggedIn: false,
-isLoading:  true,
+  user:       { id: 'mock_creator_1', name: 'Sofía', role: 'creator' },
+ isLoggedIn: true,
+ isLoading:  true,
+
+//✅ Funciones para manejo de usuario HOMBRE OSEA USER
+//const useAppStore = create((set, get) => ({
+ //user:       null,
+// isLoggedIn: false,
+//isLoading:  true,
 
   setUser:    (user) => set({ user, isLoggedIn: !!user, isLoading: false }),
   logout:     ()     => set({ user: null, isLoggedIn: false }),
