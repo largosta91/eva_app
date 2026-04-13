@@ -1,19 +1,54 @@
-// src/features/auth/components/RegisterForm.jsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../../constants/routes';
 import useAppStore from '../../../app/store/useAppStore';
+import { supabase } from '../../../services/api/supabase';
 
 export default function RegisterForm() {
   const navigate = useNavigate();
   const setUser = useAppStore(s => s.setUser);
   const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
 
-  const handleRegister = () => {
-    // BACKEND: reemplazar con llamada a API de registro
-    setUser({ id: '1', name: form.name, role: 'user' });
+  const handleRegister = async () => {
+    if (!form.name || !form.email || !form.password) {
+      setError('Completá todos los campos');
+      return;
+    }
+    setLoading(true);
+    setError('');
+
+    const { data, error: authError } = await supabase.auth.signUp({
+      email: form.email,
+      password: form.password,
+    });
+
+    if (authError) {
+      setError(authError.message);
+      setLoading(false);
+      return;
+    }
+
+    const { error: insertError } = await supabase.from('users').insert({
+      id: data.user.id,
+      email: form.email,
+      display_name: form.name,
+      role: 'user',
+      credits: 0,
+      is_online: true,
+    });
+
+    if (insertError) {
+      console.error('INSERT ERROR:', insertError);
+      setError(insertError.message);
+      setLoading(false);
+      return;
+    }
+
+    setUser({ id: data.user.id, name: form.name, role: 'user' });
     navigate(ROUTES.USER_HOME);
   };
 
@@ -28,53 +63,33 @@ export default function RegisterForm() {
           <div
             className="font-serif text-4xl font-semibold mb-1"
             style={{ background: 'linear-gradient(135deg,#8b3a9c,#c9a84c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}
-          > 
+          >
             Eva
           </div>
           <p className="text-[#c9a84c] text-sm">Creá tu cuenta</p>
         </div>
 
         <div className="flex flex-col gap-3">
-          <input
-            name="name"
-            placeholder="Tu nombre"
-            value={form.name}
-            onChange={handleChange}
-            className="w-full bg-[#1a1826] border border-[rgba(201,168,76,.2)] rounded-full py-3.5 px-5 text-[#ede8ff] text-sm outline-none placeholder:text-[#7a748f] focus:border-[#c9a84c]"
-          />
-          <input
-            name="email"
-            type="email"
-            placeholder="Email"
-            value={form.email}
-            onChange={handleChange}
-            className="w-full bg-[#1a1826] border border-[rgba(201,168,76,.2)] rounded-full py-3.5 px-5 text-[#ede8ff] text-sm outline-none placeholder:text-[#7a748f] focus:border-[#c9a84c]"
-          />
-          <input
-            name="password"
-            type="password"
-            placeholder="Contraseña"
-            value={form.password}
-            onChange={handleChange}
-            className="w-full bg-[#1a1826] border border-[rgba(201,168,76,.2)] rounded-full py-3.5 px-5 text-[#ede8ff] text-sm outline-none placeholder:text-[#7a748f] focus:border-[#c9a84c]"
-          />
+          <input name="name" placeholder="Tu nombre" value={form.name} onChange={handleChange}
+            className="w-full bg-[#1a1826] border border-[rgba(201,168,76,.2)] rounded-full py-3.5 px-5 text-[#ede8ff] text-sm outline-none placeholder:text-[#7a748f] focus:border-[#c9a84c]" />
+          <input name="email" type="email" placeholder="Email" value={form.email} onChange={handleChange}
+            className="w-full bg-[#1a1826] border border-[rgba(201,168,76,.2)] rounded-full py-3.5 px-5 text-[#ede8ff] text-sm outline-none placeholder:text-[#7a748f] focus:border-[#c9a84c]" />
+          <input name="password" type="password" placeholder="Contraseña" value={form.password} onChange={handleChange}
+            className="w-full bg-[#1a1826] border border-[rgba(201,168,76,.2)] rounded-full py-3.5 px-5 text-[#ede8ff] text-sm outline-none placeholder:text-[#7a748f] focus:border-[#c9a84c]" />
+          {error && <p className="text-red-400 text-xs px-2">{error}</p>}
         </div>
 
-        <button
-          onClick={handleRegister}
-          className="w-full py-4 rounded-full font-semibold text-[15px] text-[#09080f] bg-gradient-to-r from-[#c9a84c] to-[#f0d882] border-none cursor-pointer shadow-[0_8px_30px_rgba(201,168,76,.3)]"
-        >
-          Crear cuenta
+        <button onClick={handleRegister} disabled={loading}
+          className="w-full py-4 rounded-full font-semibold text-[15px] text-[#09080f] bg-gradient-to-r from-[#c9a84c] to-[#f0d882] border-none cursor-pointer shadow-[0_8px_30px_rgba(201,168,76,.3)] disabled:opacity-60">
+          {loading ? 'Creando cuenta...' : 'Crear cuenta'}
         </button>
 
         <div className="text-center text-sm text-[#5a5470]">
           ¿Ya tenés cuenta?{' '}
-          <button
-            onClick={() => navigate(ROUTES.LOGIN)}
-            className="text-[#c9a84c] bg-transparent border-none cursor-pointer text-sm p-0"
-            >
+          <button onClick={() => navigate(ROUTES.LOGIN)}
+            className="text-[#c9a84c] bg-transparent border-none cursor-pointer text-sm p-0">
             Iniciá sesión
-            </button>
+          </button>
         </div>
 
       </div>

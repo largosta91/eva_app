@@ -4,214 +4,198 @@ import { ROUTES } from '../../../constants/routes';
 import useAppStore from '../../../app/store/useAppStore';
 import VideoCall from '../../calls/components/VideoCall';
 import GiftPanel from './GiftPanel';
-
-const AI_REPLIES = [
-  "Qué lindo que me escribas 💜 ¿cómo fue tu día?",
-  "Te escucho, contame más 🌸",
-  "Eso suena difícil... estoy acá 💫",
-  "Me alegra que hablemos ✨",
-  "¿Y vos qué necesitás ahora mismo?",
-  "Tengo todo el tiempo para vos 🌺",
-];
+import { supabase } from '../../../services/api/supabase';
 
 const nowTime = () => {
   const d = new Date();
   return `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
 };
 
-// --- Función Auxiliar LibreTranslate ---
-// --- Función Auxiliar LibreTranslate ---
 const fetchTranslation = async (text) => {
   try {
-    const res = await fetch("https://libretranslate.de/translate", {
-      method: "POST",
-      body: JSON.stringify({
-        q: text,
-        source: "auto",
-        target: "es", 
-        format: "text"
-      }),
-      headers: { "Content-Type": "application/json" }
-    });
+    const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=auto|es`);
     const data = await res.json();
-    return data.translatedText || text;
-  } catch { // <--- Simplemente borrá la (e), así ESLint no molesta
-    return text;
-  }
+    return data.responseData.translatedText || text;
+  } catch { return text; }
 };
 
 export default function ChatScreen({ girl, onBack }) {
   const navigate = useNavigate();
-  const { credits, spendCredits } = useAppStore();
-  
-  // Nuevo estado para controlar si la traducción está activa
-  const [translateEnabled, setTranslateEnabled] = useState(false);
-
-  const [messages, setMessages] = useState([
-    { who:'them', text:`Hola 😊 Soy ${girl.name}, ¿cómo estás hoy?`, time:nowTime() }
-  ]);
-  const [input, setInput]         = useState('');
-  const [typing, setTyping]       = useState(false);
-  const [showVC, setShowVC]       = useState(false);
+  const { credits, spendCredits, user } = useAppStore();
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [showVC, setShowVC] = useState(false);
   const [showGifts, setShowGifts] = useState(false);
-  const aiRef     = useRef(0);
+  const [translateEnabled, setTranslateEnabled] = useState(false);
   const bottomRef = useRef(null);
 
+  // El ID de conversación debe ser único entre estos dos usuarios
+  const conversationId = [user?.id, girl?.id].sort().join('_');
+
+  // 1. CARGA INICIAL DE MENSAJES
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior:'smooth' });
-  }, [messages, typing]);
+    if (!user?.id || !girl?.id) return;
+
+    supabase
+      .from('messages')
+      .select('*')
+      .or(`and(sender_id.eq.${user.id},receiver_id.eq.${girl.id}),and(sender_id.eq.${girl.id},receiver_id.eq.${user.id})`)
+      .order('created_at', { ascending: true })
+      .then(({ data }) => {
+        if (data) {
+          setMessages(data.map(m => ({
+            id: m.id, // Guardamos ID para evitar duplicados
+            who: m.sender_id === user.id ? 'me' : 'them',
+            text: m.content,
+            time: nowTime(),
+          })));
+        }
+      });
+  }, [user?.id, girl?.id]);
+
+  // 2. ESCUCHA REALTIME (Separada de la carga inicial)
+  useEffect(() => {
+    if (!user?.id || !girl?.id) return;
+
+    const channel = supabase
+      .channel(`chat_${conversationId}`)
+      .on('postgres_changes', 
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'messages',
+          // Filtro: Solo si yo soy el receptor O yo soy el emisor (para ver mis propios msjs en otros dispositivos)
+          filter: `receiver_id=eq.${user.id}` 
+        }, 
+        async (payload) => {
+          const m = payload.new;
+          
+          // Solo procesamos si el mensaje viene de "la otra persona" en este chat
+          if (m.sender_id === girl.id) {
+            let text = m.content;
+            if (translateEnabled) text = await fetchTranslation(m.content);
+            
+            setMessages(prev => {
+              // Evitar duplicados por si el insert local ya lo puso
+              if (prev.some(msg => msg.id === m.id)) return prev;
+              return [...prev, { id: m.id, who: 'them', text, time: nowTime() }];
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id, girl?.id, conversationId, translateEnabled]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const send = async () => {
     if (!input.trim()) return;
-    const t = nowTime();
-    
-    // Mensaje del usuario
-    setMessages(m => [...m, { who:'me', text:input, time:t }]);
+    const text = input;
     setInput('');
-    spendCredits(2);
-    setTyping(true);
-
-    // Simulación de respuesta de la IA
-    setTimeout(async () => {
-      const originalText = AI_REPLIES[aiRef.current % AI_REPLIES.length];
-      let finalDisplay = originalText;
-
-      // Si la traducción está activa, traducimos antes de mostrar
-      if (translateEnabled) {
-        finalDisplay = await fetchTranslation(originalText);
-      }
-
-      setTyping(false);
-      setMessages(m => [...m, { 
-        who:'them', 
-        text: originalText, 
-        translated: translateEnabled ? finalDisplay : null,
-        time: t 
-      }]);
-      aiRef.current++;
-    }, 1800);
+    
+    // Optimistic Update: Lo mostramos al toque para que no parezca lento
+    const tempId = Date.now();
+    setMessages(m => [...m, { id: tempId, who: 'me', text, time: nowTime() }]);
+    
+    const { error } = await supabase.from('messages').insert({
+      sender_id: user.id,
+      receiver_id: girl.id,
+      content: text,
+      is_read: false,
+    });
+    
+    if (error) console.error('Error al enviar:', error);
   };
 
-  const handleGiftSend = (gift) => {
-    const t = nowTime();
-    setMessages(m => [...m, {
-      who: 'me',
-      text: `${gift.emoji} ${gift.name}`,
-      time: t,
-      isGift: true,
-      giftColor: gift.color,
-    }]);
+  const handleGiftSend = async (gift) => {
+    setMessages(m => [...m, { who:'me', text:`${gift.emoji} ${gift.name}`, time:nowTime(), isGift:true, giftColor:gift.color }]);
     spendCredits(gift.cost);
     setShowGifts(false);
+    
+    await supabase.from('transactions').insert({
+      user_id: user.id, 
+      creator_id: girl.id, 
+      type: 'gift',
+      amount: gift.cost, 
+      gift_name: gift.name, 
+      gift_emoji: gift.emoji, 
+      gift_cost: gift.cost,
+    });
+    
+    // También enviamos un mensaje de texto para que quede en el historial de chat
+    await supabase.from('messages').insert({
+      sender_id: user.id,
+      receiver_id: girl.id,
+      content: `🎁 Envió un regalo: ${gift.name}`,
+    });
   };
 
   if (showVC) return (
     <VideoCall
-      creator={{ id: girl.name, name: girl.name, avatar: girl.img }}
-      user={{ id: 'user', name: 'Vos', credits }}
-      onEnd={() => navigate(ROUTES.PAYWALL)}
+      creator={{ id: girl.id, name: girl.name, avatar: girl.img }}
+      user={{ id: user.id, name: user.display_name || 'Vos', credits }}
+      onEnd={() => setShowVC(false)}
       theme="dark"
     />
   );
 
   return (
-    <div className="flex flex-col h-screen bg-[#09080f]" style={{ position:"relative" }}>
-
-      {/* Header mejorado con Switch de Traducción */}
+    <div className="flex flex-col h-screen bg-[#09080f]" style={{ position: 'relative' }}>
       <div className="flex items-center gap-3 py-3.5 px-4 bg-[#111018] border-b border-[rgba(201,168,76,.14)] shrink-0">
         <button onClick={onBack} className="bg-transparent border-none text-[#ede8ff] text-2xl cursor-pointer leading-none">←</button>
         <img src={girl.img} alt={girl.name} className="w-11 h-11 rounded-full object-cover border-2 border-[#c9a84c]" />
         <div className="flex-1">
           <div className="font-semibold text-base text-[#ede8ff]">{girl.name}</div>
-          <div className="flex items-center gap-2">
-             <button 
-                onClick={() => setTranslateEnabled(!translateEnabled)}
-                className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${translateEnabled ? 'bg-[#c9a84c] text-black border-[#c9a84c]' : 'text-[#7a748f] border-[#7a748f]'}`}
-             >
-               {translateEnabled ? 'Traducción ON' : 'Traducción OFF'}
-             </button>
-          </div>
+          <button onClick={() => setTranslateEnabled(!translateEnabled)}
+            className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${translateEnabled ? 'bg-[#c9a84c] text-black border-[#c9a84c]' : 'text-[#7a748f] border-[#7a748f]'}`}>
+            {translateEnabled ? 'Traducción ON' : 'Traducción OFF'}
+          </button>
         </div>
-        <button
-          onClick={() => setShowVC(true)}
-          className="bg-gradient-to-br from-[#c9a84c] to-[#f0d882] border-none rounded-full py-2 px-4 text-[#09080f] text-sm font-semibold cursor-pointer flex items-center gap-1.5"
-        >
+        <button onClick={() => setShowVC(true)}
+          className="bg-gradient-to-br from-[#c9a84c] to-[#f0d882] border-none rounded-full py-2 px-4 text-[#09080f] text-sm font-semibold cursor-pointer">
           📹
         </button>
       </div>
 
-      {/* Mensajes */}
       <div className="flex-1 overflow-y-auto py-4 px-4 flex flex-col gap-2.5">
         {messages.map((m, i) => (
-          <div key={i} className={`max-w-[76%] ${m.who === 'me' ? 'self-end' : 'self-start'}`}>
+          <div key={m.id || i} className={`max-w-[76%] ${m.who === 'me' ? 'self-end' : 'self-start'}`}>
             {m.isGift ? (
-              <div style={{
-                display:"flex", flexDirection:"column", alignItems:"center",
-                padding:"10px 16px", borderRadius:"16px",
-                background:`${m.giftColor}22`, border:`1px solid ${m.giftColor}66`,
-                minWidth:"80px",
-              }}>
-                <span style={{ fontSize:"32px", lineHeight:1 }}>{m.text.split(" ")[0]}</span>
-                <span style={{ fontSize:"11px", color:m.giftColor, fontWeight:600, marginTop:"4px" }}>
-                  {m.text.split(" ").slice(1).join(" ")}
-                </span>
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', padding:'10px 16px', borderRadius:'16px', background:`${m.giftColor}22`, border:`1px solid ${m.giftColor}66`, minWidth:'80px' }}>
+                <span style={{ fontSize:'32px', lineHeight:1 }}>{m.text.split(' ')[0]}</span>
+                <span style={{ fontSize:'11px', color:m.giftColor, fontWeight:600, marginTop:'4px' }}>{m.text.split(' ').slice(1).join(' ')}</span>
               </div>
             ) : (
               <div className={`py-3 px-4 rounded-[20px] text-sm leading-relaxed ${m.who === 'me' ? 'bg-gradient-to-br from-[#c9a84c] to-[#f0d882] text-[#09080f] rounded-br-[4px]' : 'bg-[#1a1826] text-[#ede8ff] rounded-bl-[4px]'}`}>
-                {/* Muestra el texto traducido si existe y la opción está activa, sino el original */}
-                {m.who === 'them' && translateEnabled && m.translated ? m.translated : m.text}
-                
-                {/* Opcional: Pequeña marca si el mensaje es traducido */}
-                {m.who === 'them' && translateEnabled && m.translated && (
-                  <div className="text-[9px] opacity-50 mt-1 italic">Traducido por EVA</div>
-                )}
+                {m.text}
               </div>
             )}
             <div className={`text-[11px] text-[#7a748f] mt-1 px-1 ${m.who === 'me' ? 'text-right' : 'text-left'}`}>{m.time}</div>
           </div>
         ))}
-        {typing && (
-          <div className="self-start bg-[#1a1826] rounded-[20px] rounded-bl-[4px] py-3.5 px-4 flex gap-1 items-center">
-            {[0,1,2].map(i => (
-              <span key={i} className="w-2 h-2 rounded-full bg-[#7a748f] inline-block" style={{ animation:'ty 1.2s infinite', animationDelay:`${i*.2}s` }} />
-            ))}
-          </div>
-        )}
         <div ref={bottomRef} />
       </div>
 
-      {/* ... Resto del componente (Créditos, Gift Panel, Input) se mantiene igual ... */}
       <div className="text-center p-1.5 text-xs text-[#7a748f] bg-[#111018] border-t border-[rgba(201,168,76,.14)]">
-        💎 {credits} créditos · −2 por mensaje
+        💎 {credits} créditos
       </div>
 
-      {showGifts && (
-        <GiftPanel context="chat" onSend={handleGiftSend} onClose={() => setShowGifts(false)} />
-      )}
+      {showGifts && <GiftPanel context="chat" onSend={handleGiftSend} onClose={() => setShowGifts(false)} />}
 
       <div className="py-2.5 px-3.5 pb-5 bg-[#111018] border-t border-[rgba(201,168,76,.14)] flex gap-2.5 items-center shrink-0">
-        <button
-          onClick={() => setShowGifts(g => !g)}
-          style={{
-            background: showGifts ? "rgba(201,168,76,.3)" : "rgba(255,255,255,.08)",
-            border: showGifts ? "1px solid rgba(201,168,76,.6)" : "1px solid rgba(255,255,255,.1)",
-            borderRadius:"50%", width:"40px", height:"40px",
-            fontSize:"18px", cursor:"pointer", flexShrink:0,
-          }}
-        >
+        <button onClick={() => setShowGifts(g => !g)}
+          style={{ background: showGifts ? 'rgba(201,168,76,.3)' : 'rgba(255,255,255,.08)', border: showGifts ? '1px solid rgba(201,168,76,.6)' : '1px solid rgba(255,255,255,.1)', borderRadius:'50%', width:'40px', height:'40px', fontSize:'18px', cursor:'pointer', flexShrink:0 }}>
           🎁
         </button>
-        <input
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && send()}
+        <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()}
           placeholder="Escribí algo..."
-          className="flex-1 bg-[#1a1826] border border-[rgba(201,168,76,.14)] rounded-full py-3 px-4 text-[#ede8ff] text-sm outline-none"
-        />
-        <button
-          onClick={send}
-          className="w-11 h-11 rounded-full bg-gradient-to-br from-[#c9a84c] to-[#f0d882] border-none text-[#09080f] text-lg cursor-pointer flex items-center justify-center"
-        >
+          className="flex-1 bg-[#1a1826] border border-[rgba(201,168,76,.14)] rounded-full py-3 px-4 text-[#ede8ff] text-sm outline-none" />
+        <button onClick={send}
+          className="w-11 h-11 rounded-full bg-gradient-to-br from-[#c9a84c] to-[#f0d882] border-none text-[#09080f] text-lg cursor-pointer flex items-center justify-center">
           ➤
         </button>
       </div>

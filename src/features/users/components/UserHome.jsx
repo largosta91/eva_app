@@ -1,5 +1,5 @@
 // 📁 src/features/users/components/UserHome.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../../constants/routes';
 import useAppStore from '../../../app/store/useAppStore';
@@ -7,41 +7,112 @@ import ChatScreen from '../../chat/components/ChatScreen';
 import PaywallGate from '../../wallet/components/PaywallGate';
 import HomeTab from './HomeTab';
 import ProfileTab from './ProfileTab';
+import { supabase } from '../../../services/api/supabase';
 
-const CHAT_HISTORY = [
-  { id: 1, name: "Sofía",    emoji: "👩", preview: "Me alegra que hablemos ✨",    time: "ahora", unread: true  },
-  { id: 2, name: "Valentina",emoji: "👩", preview: "¿Volvés mañana? 💜",           time: "3m",    unread: true  },
-  { id: 3, name: "Camila",   emoji: "👩", preview: "Fue lindo hablar con vos",     time: "1h",    unread: false },
-  { id: 4, name: "Isabella", emoji: "👩", preview: "Estoy acá cuando quieras 🌺",  time: "ayer",  unread: false },
-];
+// Eliminamos CHAT_HISTORY fijo para usar datos reales de la DB
 
 function ChatsTab({ onSelectGirl }) {
+  const { user } = useAppStore();
+  const [conversations, setConversations] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchConversations = async () => {
+    if (!user?.id) return;
+    
+    // Traemos los últimos mensajes donde el usuario participa
+    const { data, error } = await supabase
+      .from('messages')
+      .select('sender_id, receiver_id, content, created_at, is_read')
+      .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
+      .order('created_at', { ascending: false });
+
+    if (error) return console.error(error);
+
+    // Lógica para agrupar por contacto y quedarnos solo con el último mensaje
+    const chatsMap = {};
+    data.forEach(m => {
+      const contactId = m.sender_id === user.id ? m.receiver_id : m.sender_id;
+      if (!chatsMap[contactId]) {
+        chatsMap[contactId] = {
+          id: contactId,
+          preview: m.content,
+          unread: !m.is_read && m.receiver_id === user.id,
+          time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+      }
+    });
+
+    // Buscamos los nombres/fotos de esos contactos
+    const contactIds = Object.keys(chatsMap);
+    if (contactIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('users')
+        .select('id, display_name, avatar_url')
+        .in('id', contactIds);
+
+      profiles?.forEach(p => {
+        chatsMap[p.id].name = p.display_name;
+        chatsMap[p.id].img = p.avatar_url;
+      });
+    }
+
+    setConversations(Object.values(chatsMap));
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchConversations();
+
+    // Realtime: Si llega un mensaje nuevo, refrescamos la lista
+    const channel = supabase
+      .channel('user_chats_list')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => {
+        fetchConversations();
+      })
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, [user?.id]);
+
+  if (loading) return <div className="p-10 text-center text-[#7a748f]">Cargando conversaciones...</div>;
+
   return (
     <div className="flex flex-col">
       <div className="px-5 py-2">
-        {CHAT_HISTORY.map(u => (
-          <div
-            key={u.id}
-            onClick={() => onSelectGirl(u)}
-            className="flex items-center gap-3.5 py-3.5 border-b border-[rgba(201,168,76,.08)] cursor-pointer active:bg-[rgba(201,168,76,.04)]"
-          >
-            <div className="w-12 h-12 rounded-full bg-[#1a1826] text-2xl flex items-center justify-center shrink-0 border border-[rgba(201,168,76,.14)]">
-              {u.emoji}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex justify-between mb-1">
-                <span className="font-medium text-[15px] text-[#ede8ff]">{u.name}</span>
-                <span className="text-[11px] text-[#7a748f]">{u.time}</span>
-              </div>
-              <div className={`text-sm truncate ${u.unread ? 'text-[#ede8ff]' : 'text-[#7a748f]'}`}>
-                {u.preview}
-              </div>
-            </div>
-            {u.unread && (
-              <div className="w-2.5 h-2.5 rounded-full bg-[#c9a84c] shrink-0" />
-            )}
+        {conversations.length === 0 ? (
+          <div className="py-20 text-center text-[#7a748f]">
+            <span className="text-4xl block mb-2">🍃</span>
+            Aún no tienes chats abiertos
           </div>
-        ))}
+        ) : (
+          conversations.map(u => (
+            <div
+              key={u.id}
+              onClick={() => onSelectGirl(u)}
+              className="flex items-center gap-3.5 py-3.5 border-b border-[rgba(201,168,76,.08)] cursor-pointer active:bg-[rgba(201,168,76,.04)]"
+            >
+              <div className="w-12 h-12 rounded-full bg-[#1a1826] overflow-hidden shrink-0 border border-[rgba(201,168,76,.14)]">
+                {u.img ? (
+                  <img src={u.img} alt={u.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-2xl">👩</div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between mb-1">
+                  <span className="font-medium text-[15px] text-[#ede8ff]">{u.name}</span>
+                  <span className="text-[11px] text-[#7a748f]">{u.time}</span>
+                </div>
+                <div className={`text-sm truncate ${u.unread ? 'text-[#ede8ff] font-medium' : 'text-[#7a748f]'}`}>
+                  {u.preview}
+                </div>
+              </div>
+              {u.unread && (
+                <div className="w-2.5 h-2.5 rounded-full bg-[#c9a84c] shrink-0 shadow-[0_0_8px_rgba(201,168,76,0.5)]" />
+              )}
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
@@ -71,7 +142,6 @@ export default function UserHome() {
 
   return (
     <div className="w-full h-screen bg-[#09080f] text-[#ede8ff] flex flex-col overflow-hidden">
-
       {/* TOP BAR */}
       <div className="grid grid-cols-3 items-center py-3.5 px-5 bg-[#111018] border-b border-[rgba(201,168,76,.14)] shrink-0">
         <div className="flex items-center justify-start">
@@ -96,7 +166,10 @@ export default function UserHome() {
         </div>
 
         <div className="flex justify-end">
-          <div className="flex items-center gap-1.5 bg-[#1a1826] border border-[rgba(201,168,76,.14)] rounded-full py-2 px-4 text-sm font-medium text-[#c9a84c] cursor-pointer">
+          <div 
+            onClick={() => setTab('credits')}
+            className="flex items-center gap-1.5 bg-[#1a1826] border border-[rgba(201,168,76,.14)] rounded-full py-2 px-4 text-sm font-medium text-[#c9a84c] cursor-pointer active:scale-95 transition-transform"
+          >
             💎 {credits}
           </div>
         </div>
@@ -125,20 +198,17 @@ export default function UserHome() {
               tab === t.key ? 'text-[#c9a84c]' : 'text-[#7a748f]'
             }`}
           >
-            {/* Subimos la altura a h-10 para que la manzana pueda ser más grande */}
             <div className="h-10 flex items-center justify-center">
               {t.key === 'credits' ? (
                 <img 
                   src={t.icon} 
                   alt="Eva Gold" 
-                  /* Agrandamos a w-9 h-9 (36px) */
                   className={`w-9 h-9 object-contain transition-transform duration-200 ${
                     tab === t.key ? 'scale-110 opacity-100' : 'opacity-60'
                   }`} 
                 />
               ) : (
-                /* Subimos un pelín el texto a 3xl para que no se vea chico al lado de la manzana */
-                <span className="text-3xl leading-none">{t.icon}</span>
+                <span className={`text-3xl leading-none transition-transform ${tab === t.key ? 'scale-110' : ''}`}>{t.icon}</span>
               )}
             </div>
             <span className="text-[10px] font-medium uppercase tracking-wider">

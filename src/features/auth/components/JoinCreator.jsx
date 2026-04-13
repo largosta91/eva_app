@@ -4,99 +4,95 @@ import { ROUTES } from '../../../constants/routes';
 import { ROLES } from '../../../constants/roles';
 import { saveRecruiterToken } from '../../../utils/tokenUtils';
 import useAppStore from '../../../app/store/useAppStore';
+import { supabase } from '../../../services/api/supabase';
 
 export default function JoinCreator() {
-  const { token }   = useParams();
-  const navigate    = useNavigate();
-  const setUser     = useAppStore(s => s.setUser);
-  const [step, setStep]       = useState('loading');
-  const [form, setForm]       = useState({ name:'', email:'', password:'' });
-  const [error, setError]     = useState('');
+  const { token } = useParams();
+  const navigate  = useNavigate();
+  const setUser   = useAppStore(s => s.setUser);
+  const [step, setStep]             = useState('loading');
+  const [form, setForm]             = useState({ name:'', email:'', password:'' });
+  const [error, setError]           = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (token && token.length >= 6) {
-      saveRecruiterToken(token);
-      setStep('valid');
-    } else {
+    if (!token || token.length < 6) {
       setStep('invalid');
       setTimeout(() => navigate(ROUTES.SPLASH, { replace: true }), 2000);
+      return;
     }
+    supabase.from('recruiter_tokens')
+      .select('*').eq('token', token).eq('used', false).single()
+      .then(({ data }) => {
+        if (data) { saveRecruiterToken(token); setStep('valid'); }
+        else { setStep('invalid'); setTimeout(() => navigate(ROUTES.SPLASH, { replace: true }), 2000); }
+      });
   }, [token, navigate]);
 
   const handleChange = (e) => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
 
-  const handleSubmit = () => {
-    if (!form.name || !form.email || !form.password) {
-      setError('Completá todos los campos');
-      return;
-    }
+  const handleSubmit = async () => {
+    if (!form.name || !form.email || !form.password) { setError('Completá todos los campos'); return; }
     setSubmitting(true);
     setError('');
-    setTimeout(() => {
-      setUser({ id: '2', name: form.name, role: ROLES.CREATOR, recruiterToken: token });
-      navigate(ROUTES.CREATOR_HOME);
-    }, 1200);
+
+    // Verificar token justo antes de registrar
+    const { data: tokenCheck } = await supabase
+      .from('recruiter_tokens')
+      .select('*').eq('token', token).eq('used', false).single();
+
+    if (!tokenCheck) {
+      setError('Este link ya fue usado o es inválido');
+      setSubmitting(false);
+      return;
+    }
+
+    const { data, error: authError } = await supabase.auth.signUp({ email: form.email, password: form.password });
+    if (authError) { setError(authError.message); setSubmitting(false); return; }
+
+    const { error: insertError } = await supabase.from('users').insert({
+      id: data.user.id, email: form.email, display_name: form.name,
+      role: 'creator', credits: 0, is_online: true,
+    });
+    if (insertError) { setError(insertError.message); setSubmitting(false); return; }
+
+    const { error: profileError } = await supabase.from('creator_profiles').insert({
+      user_id: data.user.id, bio: '', price_per_min: 10, is_verified: false, is_available: true,
+    });
+    if (profileError) { setError(profileError.message); setSubmitting(false); return; }
+
+    // Marcar token como usado
+    await supabase.from('recruiter_tokens').update({ used: true }).eq('token', token);
+
+    setUser({ id: data.user.id, name: form.name, role: ROLES.CREATOR, recruiterToken: token });
+    navigate(ROUTES.CREATOR_HOME);
   };
 
-  if (step === 'loading') return (
-    <Screen><p className="text-[#c9a84c]">Verificando invitación...</p></Screen>
-  );
-
-  if (step === 'invalid') return (
-    <Screen><p className="text-red-400">Link inválido. Redirigiendo...</p></Screen>
-  );
+  if (step === 'loading') return <Screen><p className="text-[#c9a84c]">Verificando invitación...</p></Screen>;
+  if (step === 'invalid') return <Screen><p className="text-red-400">Link inválido. Redirigiendo...</p></Screen>;
 
   return (
     <Screen>
       <div className="w-full max-w-sm px-6 flex flex-col gap-6">
-
         <div className="text-center">
           <div className="text-5xl mb-3">🌸</div>
           <h1 className="font-serif text-3xl font-semibold text-[#ede8ff] mb-1">Te esperábamos</h1>
           <p className="text-sm text-[#7a748f]">Creá tu cuenta como talento en Eva</p>
-          <p className="text-xs text-[#c9a84c] mt-1">Token: {token}</p>
         </div>
-
         <div className="flex flex-col gap-3">
-          <input
-            name="name"
-            placeholder="Tu nombre"
-            value={form.name}
-            onChange={handleChange}
-            className="w-full bg-[#1a1826] border border-[rgba(196,96,122,.3)] rounded-full py-3.5 px-5 text-[#ede8ff] text-sm outline-none placeholder:text-[#7a748f] focus:border-[#c4607a]"
-          />
-          <input
-            name="email"
-            type="email"
-            placeholder="Email"
-            value={form.email}
-            onChange={handleChange}
-            className="w-full bg-[#1a1826] border border-[rgba(196,96,122,.3)] rounded-full py-3.5 px-5 text-[#ede8ff] text-sm outline-none placeholder:text-[#7a748f] focus:border-[#c4607a]"
-          />
-          <input
-            name="password"
-            type="password"
-            placeholder="Contraseña"
-            value={form.password}
-            onChange={handleChange}
-            className="w-full bg-[#1a1826] border border-[rgba(196,96,122,.3)] rounded-full py-3.5 px-5 text-[#ede8ff] text-sm outline-none placeholder:text-[#7a748f] focus:border-[#c4607a]"
-          />
+          <input name="name" placeholder="Tu nombre" value={form.name} onChange={handleChange}
+            className="w-full bg-[#1a1826] border border-[rgba(196,96,122,.3)] rounded-full py-3.5 px-5 text-[#ede8ff] text-sm outline-none placeholder:text-[#7a748f] focus:border-[#c4607a]" />
+          <input name="email" type="email" placeholder="Email" value={form.email} onChange={handleChange}
+            className="w-full bg-[#1a1826] border border-[rgba(196,96,122,.3)] rounded-full py-3.5 px-5 text-[#ede8ff] text-sm outline-none placeholder:text-[#7a748f] focus:border-[#c4607a]" />
+          <input name="password" type="password" placeholder="Contraseña" value={form.password} onChange={handleChange}
+            className="w-full bg-[#1a1826] border border-[rgba(196,96,122,.3)] rounded-full py-3.5 px-5 text-[#ede8ff] text-sm outline-none placeholder:text-[#7a748f] focus:border-[#c4607a]" />
         </div>
-
         {error && <p className="text-red-400 text-sm text-center">{error}</p>}
-
-        <button
-          onClick={handleSubmit}
-          disabled={submitting}
-          className="w-full py-4 rounded-full font-semibold text-[15px] text-white bg-gradient-to-r from-[#c4607a] to-[#e8a0b0] border-none cursor-pointer disabled:opacity-60"
-        >
+        <button onClick={handleSubmit} disabled={submitting}
+          className="w-full py-4 rounded-full font-semibold text-[15px] text-white bg-gradient-to-r from-[#c4607a] to-[#e8a0b0] border-none cursor-pointer disabled:opacity-60">
           {submitting ? 'Creando cuenta...' : 'Crear mi cuenta →'}
         </button>
-
-        <p className="text-[11px] text-[#7a748f] text-center">
-          Al registrarte aceptás los términos y condiciones de Eva
-        </p>
+        <p className="text-[11px] text-[#7a748f] text-center">Al registrarte aceptás los términos y condiciones de Eva</p>
       </div>
     </Screen>
   );
@@ -104,10 +100,8 @@ export default function JoinCreator() {
 
 function Screen({ children }) {
   return (
-    <div
-      className="h-screen flex items-center justify-center"
-      style={{ background:'radial-gradient(ellipse 80% 60% at 50% 0%,#1a1030,#09080f)' }}
-    >
+    <div className="h-screen flex items-center justify-center"
+      style={{ background:'radial-gradient(ellipse 80% 60% at 50% 0%,#1a1030,#09080f)' }}>
       {children}
     </div>
   );

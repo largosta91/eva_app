@@ -6,15 +6,23 @@ import useAppStore from '../../app/store/useAppStore';
 export default function ProtectedRoute({ children, requiredRole }) {
   const { isLoggedIn, user } = useAppStore();
 
-  // BACKEND: reemplazar isLoggedIn con validación de token real
-  if (!isLoggedIn) {
+  // Si no está logueado, lo mando al splash
+  if (!isLoggedIn || !user) {
     return <Navigate to={ROUTES.SPLASH} replace />;
   }
 
+  // Si la ruta requiere un rol específico y no coincide
   if (requiredRole && user?.role !== requiredRole) {
-    const home = user?.role === 'creator' ? ROUTES.CREATOR_HOME : ROUTES.USER_HOME;
-    return <Navigate to={home} replace />;
+    if (user?.role === 'creator') {
+      return <Navigate to={ROUTES.CREATOR_HOME} replace />;
+    }
+    if (user?.role === 'user') {
+      return <Navigate to={ROUTES.USER_HOME} replace />;
+    }
+    // Si el rol está vacío o inválido, lo mando al splash
+    return <Navigate to={ROUTES.SPLASH} replace />;
   }
 
+  // Si todo coincide, renderizo el componente protegido
   return children;
 }
