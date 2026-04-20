@@ -32,38 +32,39 @@ export default function App() {
     const token = getRecruiterToken();
     if (token) saveRecruiterToken(token);
 
-    // Función para inicializar la sesión
-    const initializeAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user) {
-          console.log('SESSION ID ENCONTRADO:', session.user.id);
-          
-          const { data: profile, error } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
+ const initializeAuth = async () => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    console.log('SESSION:', session);
+    
+    if (session?.user) {
+      console.log('SESSION ID:', session.user.id);
+      
+      const { data: profile, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
 
-          if (profile) {
-            console.log('PERFIL CARGADO:', profile.display_name, 'ROL:', profile.role);
-            setUser({ 
-              id: profile.id, 
-              name: profile.display_name, 
-              role: profile.role 
-            });
-          } else {
-            console.error('PERFIL NO ENCONTRADO EN TABLA USERS:', error);
-          }
-        }
-      } catch (err) {
-        console.error('ERROR EN AUTH:', err);
-      } finally {
-        // Importante: Siempre terminamos la carga, haya perfil o no
-        setLoading(false);
+      console.log('PROFILE:', profile);
+      console.log('ERROR:', error);
+
+      if (profile) {
+        setUser({ 
+          id:           profile.id, 
+          name:         profile.display_name,
+          display_name: profile.display_name,
+          role:         profile.role,
+          avatar_url:   profile.avatar_url || null,
+        });
       }
-    };
+    }
+  } catch (err) {
+    console.error('ERROR EN AUTH:', err);
+  } finally {
+    setLoading(false);
+  }
+};
 
     initializeAuth();
 
@@ -77,14 +78,12 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, [setUser, setLoading]);
 
-  // Pantalla de carga mientras verificamos sesión Y perfil
   if (isLoading) return (
     <div className="h-screen bg-[#09080f] flex items-center justify-center">
       <span className="font-serif text-4xl text-[#c9a84c] animate-pulse">Eva</span>
     </div>
   );
 
-  // Lógica de redirección blindada
   const getDefaultHome = () => {
     if (!isLoggedIn || !user) return ROUTES.SPLASH;
     return user.role === ROLES.CREATOR ? ROUTES.CREATOR_HOME : ROUTES.USER_HOME;
@@ -95,7 +94,6 @@ export default function App() {
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="w-full max-w-[400px] h-screen overflow-hidden relative shadow-[0_0_80px_rgba(0,0,0,.8)]">
           <Routes>
-            {/* Rutas Públicas */}
             <Route path={ROUTES.SPLASH}   element={<SplashScreen />} />
             <Route path={ROUTES.LOGIN}    element={<LoginForm />} />
             <Route path={ROUTES.REGISTER} element={<RegisterForm />} />
@@ -103,13 +101,11 @@ export default function App() {
             <Route path={ROUTES.JOIN}     element={<JoinCreator />} />
             <Route path={ROUTES.PAYWALL}  element={<PaywallGate />} />
 
-            {/* Rutas de Usuario (Protegidas) */}
             <Route path={ROUTES.USER_HOME}    element={<ProtectedRoute requiredRole={ROLES.USER}><UserHome /></ProtectedRoute>} />
             <Route path={ROUTES.USER_CREDITS} element={<ProtectedRoute requiredRole={ROLES.USER}><Placeholder name="Créditos" /></ProtectedRoute>} />
             <Route path={ROUTES.USER_PROFILE} element={<ProtectedRoute requiredRole={ROLES.USER}><Placeholder name="Perfil Usuario" /></ProtectedRoute>} />
             <Route path={ROUTES.USER_CHAT}    element={<ProtectedRoute requiredRole={ROLES.USER}><Placeholder name="Chat" /></ProtectedRoute>} />
 
-            {/* Rutas de Creadora (Protegidas) */}
             <Route path={ROUTES.CREATOR_HOME}    element={<ProtectedRoute requiredRole={ROLES.CREATOR}><CreatorHome /></ProtectedRoute>} />
             <Route path={ROUTES.CREATOR_CHAT}    element={<ProtectedRoute requiredRole={ROLES.CREATOR}><CreatorChatScreen /></ProtectedRoute>} />
             <Route path={ROUTES.CREATOR_CALL}    element={<ProtectedRoute requiredRole={ROLES.CREATOR}><CreatorVideoCall /></ProtectedRoute>} />
@@ -117,7 +113,6 @@ export default function App() {
             <Route path={ROUTES.CREATOR_PROFILE} element={<ProtectedRoute requiredRole={ROLES.CREATOR}><Placeholder name="Perfil Creadora" /></ProtectedRoute>} />
             <Route path={ROUTES.CREATOR_VERIFY}  element={<ProtectedRoute requiredRole={ROLES.CREATOR}><Placeholder name="Verificación KYC" /></ProtectedRoute>} />
 
-            {/* Redirección por defecto */}
             <Route path="*" element={<Navigate to={getDefaultHome()} replace />} />
           </Routes>
         </div>

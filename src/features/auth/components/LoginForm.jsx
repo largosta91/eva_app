@@ -32,26 +32,31 @@ export default function LoginForm() {
       return;
     }
 
-    // Traer perfil de la tabla users
- const { data: profile } = await supabase
-  .from('users')
-  .select('*')
-  .eq('id', data.user.id)
-  .single();
+    const { data: profile } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', data.user.id)
+      .single();
 
-if (!profile) {
-  setError('No se encontró el perfil. Registrate de nuevo.');
-  setLoading(false);
-  return;
-}
+    if (!profile) {
+      setError('No se encontró el perfil. Registrate de nuevo.');
+      setLoading(false);
+      return;
+    }
 
-setUser({ id: profile.id, name: profile.display_name, role: profile.role });
+    setUser({
+      id:           profile.id,
+      name:         profile.display_name,
+      display_name: profile.display_name,
+      role:         profile.role,
+      avatar_url:   profile.avatar_url || null,
+    });
 
-if (profile.role === 'creator') {
-  navigate(ROUTES.CREATOR_HOME);
-} else {
-  navigate(ROUTES.USER_HOME);
-}
+    if (profile.role === 'creator') {
+      navigate(ROUTES.CREATOR_HOME);
+    } else {
+      navigate(ROUTES.USER_HOME);
+    }
   };
 
   return (

@@ -33,7 +33,6 @@ export default function CreatorChatScreen({ user, onBack }) {
   useEffect(() => {
     if (!creator?.id || !user?.id) return;
 
-    // 🔹 CARGA INICIAL
     supabase
       .from('messages')
       .select('*')
@@ -48,25 +47,20 @@ export default function CreatorChatScreen({ user, onBack }) {
         })));
       });
 
-    // 🔹 REALTIME CORREGIDO
     const channel = supabase
       .channel(`chat_${conversationId}`)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
         table: 'messages',
-        filter: `receiver_id=eq.${creator.id}` // 👈 SOLO mensajes que llegan a la creadora
+        filter: `receiver_id=eq.${creator.id}`
       }, async (payload) => {
         const m = payload.new;
-
-        // 👇 FILTRO CLAVE: solo mensajes del usuario actual (Luis)
-        if (m.sender_id !== user.id) return;
 
         let text = m.content;
         if (translateEnabled) text = await fetchTranslation(m.content);
 
         setMessages(prev => {
-          // evitar duplicados
           if (prev.some(msg => msg.id === m.id)) return prev;
           return [...prev, { id: m.id, who: 'them', text, time: nowTime() }];
         });
@@ -88,7 +82,6 @@ export default function CreatorChatScreen({ user, onBack }) {
     setInput('');
 
     const tempId = Date.now();
-
     setMessages(m => [...m, { id: tempId, who: 'me', text, time: nowTime() }]);
 
     await supabase.from('messages').insert({

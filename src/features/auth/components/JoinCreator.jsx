@@ -36,7 +36,6 @@ export default function JoinCreator() {
     setSubmitting(true);
     setError('');
 
-    // Verificar token justo antes de registrar
     const { data: tokenCheck } = await supabase
       .from('recruiter_tokens')
       .select('*').eq('token', token).eq('used', false).single();
@@ -47,21 +46,23 @@ export default function JoinCreator() {
       return;
     }
 
-    const { data, error: authError } = await supabase.auth.signUp({ email: form.email, password: form.password });
-    if (authError) { setError(authError.message); setSubmitting(false); return; }
-
-    const { error: insertError } = await supabase.from('users').insert({
-      id: data.user.id, email: form.email, display_name: form.name,
-      role: 'creator', credits: 0, is_online: true,
+    const { data, error: authError } = await supabase.auth.signUp({
+      email: form.email,
+      password: form.password,
+      options: {
+        data: {
+          display_name: form.name,
+          role: 'creator',
+        }
+      }
     });
-    if (insertError) { setError(insertError.message); setSubmitting(false); return; }
+    if (authError) { setError(authError.message); setSubmitting(false); return; }
 
     const { error: profileError } = await supabase.from('creator_profiles').insert({
       user_id: data.user.id, bio: '', price_per_min: 10, is_verified: false, is_available: true,
     });
     if (profileError) { setError(profileError.message); setSubmitting(false); return; }
 
-    // Marcar token como usado
     await supabase.from('recruiter_tokens').update({ used: true }).eq('token', token);
 
     setUser({ id: data.user.id, name: form.name, role: ROLES.CREATOR, recruiterToken: token });

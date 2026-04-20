@@ -24,26 +24,16 @@ export default function RegisterForm() {
     const { data, error: authError } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
+      options: {
+        data: {
+          display_name: form.name,
+          role: 'user',
+        }
+      }
     });
 
     if (authError) {
       setError(authError.message);
-      setLoading(false);
-      return;
-    }
-
-    const { error: insertError } = await supabase.from('users').insert({
-      id: data.user.id,
-      email: form.email,
-      display_name: form.name,
-      role: 'user',
-      credits: 0,
-      is_online: true,
-    });
-
-    if (insertError) {
-      console.error('INSERT ERROR:', insertError);
-      setError(insertError.message);
       setLoading(false);
       return;
     }

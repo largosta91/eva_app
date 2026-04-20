@@ -154,7 +154,7 @@ export default function VideoCall({
       <div className="absolute inset-0">
         <div className="w-full h-full flex items-center justify-center"
           style={{ background: "linear-gradient(135deg, #1a0830, #09080f)" }}>
-          <span style={{ fontSize: 160, opacity: 0.15 }}>🌺</span>
+          <span style={{ fontSize: 160, opacity: 0.15 }}>💫</span>
         </div>
       </div>
 
