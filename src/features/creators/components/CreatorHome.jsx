@@ -73,17 +73,19 @@ function useConversations(creatorId) {
 
     const { data: users } = await supabase
       .from('users')
-      .select('id, display_name')
+      .select('id, display_name, avatar_url')
       .in('id', ids);
 
-    const userMap = Object.fromEntries((users || []).map(u => [u.id, u.display_name]));
+    const userMap = Object.fromEntries(
+      (users || []).map(u => [u.id, { name: u.display_name, avatar: u.avatar_url }])
+    );
 
     setConversations(
       ids.map(id => ({
         id,
-        name: userMap[id] ?? 'Usuario',
+        name: userMap[id]?.name ?? 'Usuario',
+        avatar: userMap[id]?.avatar || null,
         preview: seen.get(id).content,
-        emoji: '🎩',
       }))
     );
   }, [creatorId]);
@@ -129,7 +131,6 @@ function AvatarUpload({ size = 'sm' }) {
 
       if (dbError) throw dbError;
 
-      // ✅ Actualiza el store para que persista
       setUser({ ...user, avatar_url: publicUrl });
     } catch (err) {
       console.error('Upload error:', err);
@@ -156,6 +157,73 @@ function AvatarUpload({ size = 'sm' }) {
         style={{ bottom: 0, right: 0, width: isLarge ? 26 : 18, height: isLarge ? 26 : 18, fontSize: isLarge ? 13 : 9, background: 'linear-gradient(135deg,#f472b6,#7c3aed)', border: '2px solid #fdf6f0' }}>
         📷
       </button>
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+    </div>
+  );
+}
+
+// ─── CoverUpload ────────────────────────────────────────────────────────────
+function CoverUpload() {
+  const fileRef = useRef(null);
+  const { user, setUser } = useAppStore();
+  const [uploading, setUploading] = useState(false);
+
+  const handleFile = async (e) => {
+    const f = e.target.files?.[0];
+    if (!f || !user?.id) return;
+
+    setUploading(true);
+    try {
+      const ext = f.name.split('.').pop();
+      const path = `${user.id}/cover.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, f, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+      const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
+
+      const { error: dbError } = await supabase
+        .from('users')
+        .update({ cover_url: publicUrl })
+        .eq('id', user.id);
+
+      if (dbError) throw dbError;
+
+      setUser({ ...user, cover_url: publicUrl });
+    } catch (err) {
+      console.error('Cover upload error:', err);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const cover = user?.cover_url || null;
+
+  return (
+    <div
+      onClick={() => fileRef.current?.click()}
+      className="w-full rounded-2xl overflow-hidden cursor-pointer border-2 border-dashed border-[rgba(196,96,122,.3)] flex items-center justify-center"
+      style={{ height: 120, background: cover ? 'transparent' : 'rgba(196,96,122,.05)', position: 'relative' }}
+    >
+      {uploading ? (
+        <span className="text-2xl animate-pulse">⏳</span>
+      ) : cover ? (
+        <>
+          <img src={cover} alt="cover" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+            <span className="text-white text-sm font-medium">📷 Cambiar foto</span>
+          </div>
+        </>
+      ) : (
+        <div className="flex flex-col items-center gap-1 text-[#9a7a84]">
+          <span className="text-2xl">📷</span>
+          <span className="text-xs">Subir segunda foto</span>
+        </div>
+      )}
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
     </div>
   );
@@ -271,7 +339,12 @@ function FHome({ onSelectUser }) {
           : conversations.map(u => (
             <div key={u.id} onClick={() => onSelectUser(u)}
               className="flex items-center gap-3.5 bg-[#fff9f5] border border-[rgba(196,96,122,.15)] rounded-2xl p-4 cursor-pointer active:scale-[0.98] transition-transform">
-              <div className="w-12 h-12 rounded-full bg-[#f5ece6] text-2xl flex items-center justify-center shrink-0 shadow-inner">{u.emoji}</div>
+              <div className="w-12 h-12 rounded-full bg-[#f5ece6] text-2xl flex items-center justify-center shrink-0 shadow-inner overflow-hidden">
+                {u.avatar
+                  ? <img src={u.avatar} alt={u.name} className="w-full h-full object-cover" />
+                  : '🎩'
+                }
+              </div>
               <div className="flex-1 min-w-0">
                 <div className="font-medium text-[15px] mb-0.5 text-[#2a1a20]">{u.name}</div>
                 <div className="text-xs text-[#9a7a84] truncate">{u.preview}</div>
@@ -296,7 +369,12 @@ function FChats({ onSelectUser }) {
         ? <div className="text-center text-[#9a7a84] py-10 text-sm">No hay chats aún</div>
         : conversations.map(u => (
           <div key={u.id} onClick={() => onSelectUser(u)} className="flex items-center gap-3.5 py-3.5 border-b border-[rgba(196,96,122,.15)] cursor-pointer">
-            <div className="w-12 h-12 rounded-full bg-[#f5ece6] text-2xl flex items-center justify-center shrink-0">🎩</div>
+            <div className="w-12 h-12 rounded-full bg-[#f5ece6] text-2xl flex items-center justify-center shrink-0 overflow-hidden">
+              {u.avatar
+                ? <img src={u.avatar} alt={u.name} className="w-full h-full object-cover" />
+                : '🎩'
+              }
+            </div>
             <div className="flex-1 min-w-0">
               <div className="font-medium text-[15px] mb-1">{u.name}</div>
               <div className="text-sm text-[#9a7a84] truncate">{u.preview}</div>
@@ -348,7 +426,6 @@ function FProfile({ onLogout }) {
   const [isEditing, setIsEditing] = useState(false);
   const privacyFileRef = useRef(null);
 
-  // Sincroniza si el store se actualiza después del mount
   useEffect(() => {
     if (user?.display_name) setName(user.display_name);
   }, [user?.display_name]);
@@ -424,6 +501,13 @@ function FProfile({ onLogout }) {
         <div className="inline-flex items-center gap-1.5 bg-[#e0f2fe] rounded-full px-4 py-1.5 mt-2.5 text-sm text-[#0369a1] font-medium">
           ✅ Perfil Verificado
         </div>
+      </div>
+
+      {/* ✅ Segunda foto — flip card */}
+      <div className="bg-[#fff9f5] border border-[rgba(196,96,122,.15)] rounded-2xl p-4">
+        <p className="text-xs font-bold uppercase tracking-wider text-[#9a7a84] mb-3">Segunda foto de perfil</p>
+        <CoverUpload />
+        <p className="text-[10px] text-[#9a7a84] mt-2 text-center">Los usuarios la ven al mantener presionada tu card</p>
       </div>
 
       <div className="bg-[#fff9f5] border border-[rgba(196,96,122,.15)] rounded-2xl overflow-hidden">

@@ -56,6 +56,7 @@ export default function App() {
           display_name: profile.display_name,
           role:         profile.role,
           avatar_url:   profile.avatar_url || null,
+          cover_url:    profile.cover_url || null, // 
         });
       }
     }

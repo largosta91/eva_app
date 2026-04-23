@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../../constants/routes';
 import useAppStore from '../../../app/store/useAppStore';
 import VideoCall from '../../calls/components/VideoCall';
@@ -20,7 +19,6 @@ const fetchTranslation = async (text) => {
 };
 
 export default function ChatScreen({ girl, onBack }) {
-  const navigate = useNavigate();
   const { credits, spendCredits, user } = useAppStore();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');

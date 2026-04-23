@@ -2,6 +2,41 @@ import { useEffect, useState } from 'react';
 import { ANIM_CSS } from '../../../constants/girlsData';
 import { supabase } from '../../../services/api/supabase';
 
+function CreatorCard({ g, onSelectGirl }) {
+  const [flipped, setFlipped] = useState(false);
+  const hasCover = !!g.cover_url;
+
+  return (
+    <div
+      key={g.id}
+      onPointerDown={() => hasCover && setFlipped(true)}
+      onPointerUp={() => setFlipped(false)}
+      onPointerLeave={() => setFlipped(false)}
+      onClick={() => onSelectGirl({ id: g.id, name: g.display_name, img: g.avatar_url })}
+      className="rounded-[20px] overflow-hidden bg-[#1a1826] border border-[rgba(201,168,76,.14)] aspect-[3/4] relative cursor-pointer hover:scale-[1.02]"
+      style={{ transition: 'transform 0.2s' }}
+    >
+      <img
+        src={flipped && hasCover ? g.cover_url : g.avatar_url}
+        alt={g.display_name}
+        className="w-full h-full object-cover block"
+        style={{ transition: 'opacity 0.2s' }}
+      />
+
+      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent" />
+
+      <div className="absolute bottom-0 left-0 right-0 p-3.5">
+        <div className="font-serif text-xl font-semibold text-white mb-0.5">
+          {g.display_name}
+        </div>
+        {hasCover && (
+          <div className="text-[10px] text-white/50">Mantené para ver más</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function HomeTab({ onSelectGirl }) {
   const [creators, setCreators] = useState([]);
 
@@ -15,10 +50,10 @@ export default function HomeTab({ onSelectGirl }) {
   useEffect(() => {
     supabase
       .from('users')
-      .select('id, display_name, avatar_url')
+      .select('id, display_name, avatar_url, cover_url')
       .eq('role', 'creator')
       .not('avatar_url', 'is', null)
-      .then(({ data }) => { if (data) setCreators(data); });
+      .then(({ data }) => { if (data) setCreators([...data].sort(() => Math.random() - 0.5)); });
   }, []);
 
   return (
@@ -41,29 +76,7 @@ export default function HomeTab({ onSelectGirl }) {
       ) : (
         <div className="grid grid-cols-2 gap-3.5">
           {creators.map(g => (
-            <div
-              key={g.id}
-              onClick={() => onSelectGirl({
-                id: g.id,
-                name: g.display_name,
-                img: g.avatar_url
-              })}
-              className="rounded-[20px] overflow-hidden bg-[#1a1826] border border-[rgba(201,168,76,.14)] aspect-[3/4] relative transition-transform duration-200 cursor-pointer hover:scale-[1.02]"
-            >
-              <img
-                src={g.avatar_url}
-                alt={g.display_name}
-                className="w-full h-full object-cover block"
-              />
-
-              <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent" />
-
-              <div className="absolute bottom-0 left-0 right-0 p-3.5">
-                <div className="font-serif text-xl font-semibold text-white mb-0.5">
-                  {g.display_name}
-                </div>
-              </div>
-            </div>
+            <CreatorCard key={g.id} g={g} onSelectGirl={onSelectGirl} />
           ))}
         </div>
       )}
