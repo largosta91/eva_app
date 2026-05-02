@@ -16,6 +16,8 @@ import CreatorHome from '../features/creators/components/CreatorHome';
 import JoinCreator from '../features/auth/components/JoinCreator';
 import CreatorChatScreen from '../features/creators/components/CreatorChatScreen';
 import CreatorVideoCall from '../features/creators/components/CreatorVideoCall';
+import TermsOfService from '../components/common/TermsOfService';
+import PrivacyPolicy from '../components/common/PrivacyPolicy';
 
 function Placeholder({ name }) {
   return (
@@ -32,40 +34,40 @@ export default function App() {
     const token = getRecruiterToken();
     if (token) saveRecruiterToken(token);
 
- const initializeAuth = async () => {
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    console.log('SESSION:', session);
-    
-    if (session?.user) {
-      console.log('SESSION ID:', session.user.id);
-      
-      const { data: profile, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('SESSION:', session);
+        
+        if (session?.user) {
+          console.log('SESSION ID:', session.user.id);
+          
+          const { data: profile, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
 
-      console.log('PROFILE:', profile);
-      console.log('ERROR:', error);
+          console.log('PROFILE:', profile);
+          console.log('ERROR:', error);
 
-      if (profile) {
-        setUser({ 
-          id:           profile.id, 
-          name:         profile.display_name,
-          display_name: profile.display_name,
-          role:         profile.role,
-          avatar_url:   profile.avatar_url || null,
-          cover_url:    profile.cover_url || null, // 
-        });
+          if (profile) {
+            setUser({ 
+              id:           profile.id, 
+              name:         profile.display_name,
+              display_name: profile.display_name,
+              role:         profile.role,
+              avatar_url:   profile.avatar_url || null,
+              cover_url:    profile.cover_url || null,
+            });
+          }
+        }
+      } catch (err) {
+        console.error('ERROR EN AUTH:', err);
+      } finally {
+        setLoading(false);
       }
-    }
-  } catch (err) {
-    console.error('ERROR EN AUTH:', err);
-  } finally {
-    setLoading(false);
-  }
-};
+    };
 
     initializeAuth();
 
@@ -101,6 +103,10 @@ export default function App() {
             <Route path={ROUTES.VERIFY}   element={<VerifyScreen />} />
             <Route path={ROUTES.JOIN}     element={<JoinCreator />} />
             <Route path={ROUTES.PAYWALL}  element={<PaywallGate />} />
+
+            {/* ✅ Rutas legales */}
+            <Route path="/terms"   element={<TermsOfService />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
 
             <Route path={ROUTES.USER_HOME}    element={<ProtectedRoute requiredRole={ROLES.USER}><UserHome /></ProtectedRoute>} />
             <Route path={ROUTES.USER_CREDITS} element={<ProtectedRoute requiredRole={ROLES.USER}><Placeholder name="Créditos" /></ProtectedRoute>} />

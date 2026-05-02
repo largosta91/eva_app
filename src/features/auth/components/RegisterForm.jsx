@@ -8,6 +8,7 @@ export default function RegisterForm() {
   const navigate = useNavigate();
   const setUser = useAppStore(s => s.setUser);
   const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [accepted, setAccepted] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -18,18 +19,17 @@ export default function RegisterForm() {
       setError('Completá todos los campos');
       return;
     }
+    if (!accepted) {
+      setError('Debés aceptar los Términos y Condiciones para continuar');
+      return;
+    }
     setLoading(true);
     setError('');
 
     const { data, error: authError } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
-      options: {
-        data: {
-          display_name: form.name,
-          role: 'user',
-        }
-      }
+      options: { data: { display_name: form.name, role: 'user' } }
     });
 
     if (authError) {
@@ -67,6 +67,33 @@ export default function RegisterForm() {
           <input name="password" type="password" placeholder="Contraseña" value={form.password} onChange={handleChange}
             className="w-full bg-[#1a1826] border border-[rgba(201,168,76,.2)] rounded-full py-3.5 px-5 text-[#ede8ff] text-sm outline-none placeholder:text-[#7a748f] focus:border-[#c9a84c]" />
           {error && <p className="text-red-400 text-xs px-2">{error}</p>}
+        </div>
+
+        {/* ✅ Checkbox términos */}
+        <div className="flex items-start gap-3 px-1">
+          <input
+            type="checkbox"
+            id="terms"
+            checked={accepted}
+            onChange={e => setAccepted(e.target.checked)}
+            className="mt-0.5 accent-[#c9a84c] w-4 h-4 shrink-0 cursor-pointer"
+          />
+          <label htmlFor="terms" className="text-xs text-[#7a748f] leading-relaxed cursor-pointer">
+            Confirmo que tengo +18 años y acepto los{' '}
+            <span
+              onClick={() => window.open('/terms', '_blank')}
+              className="text-[#c9a84c] underline cursor-pointer"
+            >
+              Términos y Condiciones
+            </span>{' '}
+            y la{' '}
+            <span
+              onClick={() => window.open('/privacy', '_blank')}
+              className="text-[#c9a84c] underline cursor-pointer"
+            >
+              Política de Privacidad
+            </span>
+          </label>
         </div>
 
         <button onClick={handleRegister} disabled={loading}
