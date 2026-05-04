@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import useAppStore from '../../../app/store/useAppStore';
 import { supabase } from '../../../services/api/supabase';
+import ReportModal from '../../moderation/components/ReportModal';
 
 const sonidoBasico = new URL("../../../assets/sounds/sonidobasico.mp3", import.meta.url).href;
 const sonidoRosa   = new URL("../../../assets/sounds/rosa.mp3",         import.meta.url).href;
@@ -37,7 +38,6 @@ const fetchTranslation = async (text) => {
   }
 };
 
-// Detecta si un mensaje es un regalo y devuelve los datos del regalo o null
 const parseGift = (content) => {
   if (!content?.startsWith('🎁 Envió un regalo:')) return null;
   const name = content.replace('🎁 Envió un regalo:', '').trim();
@@ -50,6 +50,7 @@ export default function CreatorChatScreen({ user, onBack }) {
   const [input, setInput] = useState('');
   const [earnings, setEarnings] = useState(0);
   const [translateEnabled, setTranslateEnabled] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   const bottomRef = useRef(null);
   const audioRef = useRef(null);
 
@@ -102,8 +103,6 @@ export default function CreatorChatScreen({ user, onBack }) {
         if (translateEnabled) text = await fetchTranslation(m.content);
 
         const gift = parseGift(m.content);
-
-        // Si es un regalo, reproducimos el sonido
         if (gift) playGiftSound(gift);
 
         setMessages(prev => {
@@ -174,6 +173,16 @@ export default function CreatorChatScreen({ user, onBack }) {
           <span className="text-sm">💜</span>
           <span className="text-xs font-bold" style={{ color: '#7c3aed' }}>${earnings}</span>
         </div>
+
+        {/* Botón reportar */}
+        <button
+          onClick={() => setShowReport(true)}
+          title="Reportar usuario"
+          className="bg-transparent border-none cursor-pointer text-lg shrink-0"
+          style={{ color: '#a78b9a' }}
+        >
+          🚩
+        </button>
       </div>
 
       {/* MENSAJES */}
@@ -181,7 +190,6 @@ export default function CreatorChatScreen({ user, onBack }) {
         {messages.map((m, i) => (
           <div key={m.id || i} className={`max-w-[76%] ${m.who === 'me' ? 'self-end' : 'self-start'}`}>
             {m.gift ? (
-              // ✅ Card de regalo igual que en ChatScreen del user
               <div style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
                 padding: '10px 16px', borderRadius: '16px',
@@ -239,6 +247,15 @@ export default function CreatorChatScreen({ user, onBack }) {
           ➤
         </button>
       </div>
+
+      {/* REPORT MODAL */}
+      {showReport && (
+        <ReportModal
+          theme="light"
+          reportedId={user?.id}
+          onClose={() => setShowReport(false)}
+        />
+      )}
     </div>
   );
 }

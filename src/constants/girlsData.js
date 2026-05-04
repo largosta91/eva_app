@@ -6,14 +6,6 @@ export const GIRLS = [
   { name:"Lucía",     age:25, emoji:"🌸", tags:["Paciente","Amorosa"],     vip:true,  online:true,  img:"https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=400&q=80" },
 ];
 
-export const AI_REPLIES = [
-  "Qué lindo que me escribas 💜 ¿cómo fue tu día?",
-  "Te escucho, contame más 🌸",
-  "Eso suena difícil... estoy acá 💫",
-  "Me alegra que hablemos ✨",
-  "¿Y vos qué necesitás ahora mismo?",
-  "Tengo todo el tiempo para vos 🌺",
-];
 
 export const ANIM_CSS = `
   @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}

@@ -59,6 +59,7 @@ export default function App() {
               role:         profile.role,
               avatar_url:   profile.avatar_url || null,
               cover_url:    profile.cover_url || null,
+              verification_status: profile.verification_status || 'none',
             });
           }
         }
@@ -71,7 +72,7 @@ export default function App() {
 
     initializeAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+   const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') {
         setUser(null);
         setLoading(false);
