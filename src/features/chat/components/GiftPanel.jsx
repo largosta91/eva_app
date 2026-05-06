@@ -1,20 +1,7 @@
 import { useEffect, useRef } from "react";
 import { GIFTS } from "../../../constants/gifts";
 
-/* ─────────────────────────────
-   SONIDOS (forma correcta en Vite)
-───────────────────────────── */
-const SOUNDS = {
-  basico:   new URL("../../../assets/sounds/sonidobasico.mp3", import.meta.url).href,
-  rosa:     new URL("../../../assets/sounds/rosa.mp3",         import.meta.url).href,
-  copa:     new URL("../../../assets/sounds/copadevino.mp3",   import.meta.url).href,
-  diamante: new URL("../../../assets/sounds/diamante2.mp3",    import.meta.url).href,
-  anillo:   new URL("../../../assets/sounds/anillo.mp3",       import.meta.url).href,
-  oro:      new URL("../../../assets/sounds/bolsadeoro.mp3",   import.meta.url).href,
-};
-
 const GiftPanel = ({ onSend, onClose }) => {
-  const audioRef = useRef(null);
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -29,24 +16,7 @@ const GiftPanel = ({ onSend, onClose }) => {
     }
   }, []);
 
-  const handleGiftClick = (gift) => {
-    const sound = SOUNDS[gift.soundKey];
-    if (sound) {
-      try {
-        if (audioRef.current) {
-          audioRef.current.pause();
-          audioRef.current.currentTime = 0;
-        }
-        const audio = new Audio(sound);
-        audio.volume = 0.8;
-        audioRef.current = audio;
-        audio.play().catch((e) => console.warn("Audio bloqueado:", e));
-      } catch (err) {
-        console.warn("Error reproduciendo sonido:", err);
-      }
-    }
-    onSend?.(gift);
-  };
+
 
   return (
     <div
@@ -76,7 +46,7 @@ const GiftPanel = ({ onSend, onClose }) => {
         {GIFTS.map((gift) => (
           <button
             key={gift.id}
-            onClick={() => handleGiftClick(gift)}
+            onClick={() => onSend?.(gift)}
             style={{
               display: "flex",
               flexDirection: "column",
