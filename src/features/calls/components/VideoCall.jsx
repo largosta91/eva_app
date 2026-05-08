@@ -79,12 +79,26 @@ function GiftOverlay({ gift, onDone }) {
           }} />
         ))}
 
-        <span style={{
-          fontSize: "120px", lineHeight: 1,
-          filter: `drop-shadow(0 0 40px ${gift.color})`,
-        }}>
-          {gift.emoji}
-        </span>
+        {/* ── IMAGEN o EMOJI según si el gift tiene imagen ── */}
+        {gift.image ? (
+          <img
+            src={gift.image}
+            alt={gift.name}
+            style={{
+              width: 180,
+              height: 180,
+              objectFit: "contain",
+              filter: `drop-shadow(0 0 40px ${gift.color})`,
+            }}
+          />
+        ) : (
+          <span style={{
+            fontSize: "120px", lineHeight: 1,
+            filter: `drop-shadow(0 0 40px ${gift.color})`,
+          }}>
+            {gift.emoji}
+          </span>
+        )}
 
         <div style={{
           background: `${gift.color}22`,
@@ -119,8 +133,7 @@ export default function VideoCall({
   const [camOff, setCamOff]         = useState(false);
   const [showGifts, setShowGifts]   = useState(false);
   const [activeGift, setActiveGift] = useState(null);
-  const [showChat, setShowChat]     = useState(false); // ⭐ toggle mini chat
-
+  const [showChat, setShowChat]     = useState(false);
 
   const _localVideoRef  = useRef(null);
   const _remoteVideoRef = useRef(null);
@@ -141,11 +154,12 @@ export default function VideoCall({
     setShowGifts(false);
     setActiveGift(gift);
     console.log("Regalo enviado durante llamada (mock):", gift);
-    };
-    const handleEnd = () => {
-  setStatus("ended");
-  onEnd?.();
-    };
+  };
+
+  const handleEnd = () => {
+    setStatus("ended");
+    onEnd?.();
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col overflow-hidden">
@@ -165,7 +179,6 @@ export default function VideoCall({
           onDone={() => setActiveGift(null)}
         />
       )}
-
 
       {/* ── BARRA SUPERIOR ── */}
       <div
@@ -215,7 +228,7 @@ export default function VideoCall({
         </button>
       </div>
 
-      {/* ⭐ BOTÓN MINI CHAT */}
+      {/* ── BOTÓN MINI CHAT ── */}
       <div className="absolute z-20" style={{ bottom: 120, left: 80 }}>
         <button
           onClick={() => setShowChat(c => !c)}
@@ -242,7 +255,7 @@ export default function VideoCall({
         onToggleCam={() => setCamOff(c => !c)}
         onEnd={handleEnd}
       />
-      
+
       {/* ── PANEL DE REGALOS ── */}
       {showGifts && (
         <GiftPanel
@@ -254,7 +267,7 @@ export default function VideoCall({
         />
       )}
 
-      {/* ⭐ MINI CHAT OVERLAY — se maneja solo con position fixed */}
+      {/* ── MINI CHAT OVERLAY ── */}
       {showChat && (
         <MiniChat theme={theme} onClose={() => setShowChat(false)} />
       )}

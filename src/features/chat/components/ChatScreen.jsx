@@ -228,15 +228,23 @@ export default function ChatScreen({ girl, onBack }) {
           key={m.id || i}
           className={`max-w-[76%] ${m.who === 'me' ? 'self-end' : 'self-start'}`}
         >
-          <div
-            className={`py-3 px-4 rounded-[20px] text-sm ${
-              m.who === 'me'
-                ? 'bg-gradient-to-br from-[#c9a84c] to-[#f0d882] text-[#09080f]'
-                : 'bg-[#1a1826] text-[#ede8ff]'
-            }`}
-          >
-            {m.text}
-          </div>
+        <div
+  className={`py-3 px-4 rounded-[20px] text-sm ${
+    m.who === 'me'
+      ? 'bg-gradient-to-br from-[#c9a84c] to-[#f0d882] text-[#09080f]'
+      : 'bg-[#1a1826] text-[#ede8ff]'
+  }`}
+>
+  {m.isGift ? (
+    <img
+      src={m.text.split(' ')[0]}
+      alt="gift"
+      className="w-16 h-16 object-contain"
+    />
+  ) : (
+    m.text
+  )}
+</div>
 
           <div className="text-[11px] text-[#7a748f] mt-1 px-1">
             {m.time}

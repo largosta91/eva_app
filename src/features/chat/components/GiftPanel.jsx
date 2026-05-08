@@ -61,7 +61,12 @@ const GiftPanel = ({ onSend, onClose }) => {
               transition: "transform 0.1s",
             }}
           >
-            <span style={{ fontSize: "32px" }}>{gift.emoji}</span>
+{gift.imagen ? (
+  <img src={gift.image} alt={gift.name} className="w-16 h-16 object-contain" />
+) : (
+  <span>{gift.emoji}</span>
+)}
+
             <span style={{ fontSize: "11px", color: "#fff", marginTop: "4px", fontWeight: "600" }}>
               {gift.name}
             </span>
