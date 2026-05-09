@@ -1,22 +1,49 @@
 import { useEffect, useRef } from "react";
 import { GIFTS } from "../../../constants/gifts";
 
+import sonidobasico from "../../../assets/sounds/sonidobasico.mp3";
+import rosa         from "../../../assets/sounds/rosa.mp3";
+import copadevino   from "../../../assets/sounds/copadevino.mp3";
+import diamante2    from "../../../assets/sounds/diamante2.mp3";
+import anillo       from "../../../assets/sounds/anillo.mp3";
+import bolsadeoro   from "../../../assets/sounds/bolsadeoro.mp3";
+
+const SOUNDS = {
+  basico:   sonidobasico,
+  rosa:     rosa,
+  copa:     copadevino,
+  diamante: diamante2,
+  corona:   anillo,
+  oro:      bolsadeoro,
+};
+
 const GiftPanel = ({ onSend, onClose }) => {
   const scrollRef = useRef(null);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      const timer = setTimeout(() => {
-        scrollRef.current.scrollTo({ left: 70, behavior: "smooth" });
-        setTimeout(() => {
-          scrollRef.current.scrollTo({ left: 0, behavior: "smooth" });
-        }, 600);
-      }, 400);
-      return () => clearTimeout(timer);
-    }
+    let mounted = true;
+    const timer = setTimeout(() => {
+      if (!mounted || !scrollRef.current) return;
+      scrollRef.current.scrollTo({ left: 70, behavior: "smooth" });
+      setTimeout(() => {
+        if (!mounted || !scrollRef.current) return;
+        scrollRef.current.scrollTo({ left: 0, behavior: "smooth" });
+      }, 600);
+    }, 400);
+    return () => {
+      mounted = false;
+      clearTimeout(timer);
+    };
   }, []);
 
-
+  const handleSend = (gift) => {
+    const soundSrc = SOUNDS[gift.soundKey];
+    if (soundSrc) {
+      const audio = new Audio(soundSrc);
+      audio.play().catch(() => {});
+    }
+    onSend?.(gift);
+  };
 
   return (
     <div
@@ -46,7 +73,7 @@ const GiftPanel = ({ onSend, onClose }) => {
         {GIFTS.map((gift) => (
           <button
             key={gift.id}
-            onClick={() => onSend?.(gift)}
+            onClick={() => handleSend(gift)}
             style={{
               display: "flex",
               flexDirection: "column",
@@ -61,12 +88,7 @@ const GiftPanel = ({ onSend, onClose }) => {
               transition: "transform 0.1s",
             }}
           >
-{gift.imagen ? (
-  <img src={gift.image} alt={gift.name} className="w-16 h-16 object-contain" />
-) : (
-  <span>{gift.emoji}</span>
-)}
-
+            <span style={{ fontSize: "32px" }}>{gift.emoji}</span>
             <span style={{ fontSize: "11px", color: "#fff", marginTop: "4px", fontWeight: "600" }}>
               {gift.name}
             </span>

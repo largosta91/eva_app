@@ -15,6 +15,15 @@ const OVERLAY_KEYFRAMES = `
     0%   { transform: translate(-50%, -50%) scale(1);   opacity: 1; }
     100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
   }
+  @keyframes oro-overlay-in {
+    0%   { opacity: 0; transform: scale(0.85); }
+    60%  { opacity: 1; transform: scale(1.03); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  @keyframes oro-overlay-out {
+    0%   { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1.1); }
+  }
   @keyframes overlay-confetti {
     0%   { transform: translate(0,0) rotate(0deg) scale(1); opacity: 1; }
     100% { transform: translate(var(--cx), var(--cy)) rotate(var(--cr)) scale(0); opacity: 0; }
@@ -42,12 +51,63 @@ function GiftOverlay({ gift, onDone }) {
   const [phase, setPhase] = useState("in");
   const [particles] = useState(() => makeOverlayParticles(24));
 
+  const isOro = gift.id === 8;
+
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase("out"), 2000);
-    const t2 = setTimeout(() => onDone?.(), 2500);
+    const t1 = setTimeout(() => setPhase("out"), isOro ? 4000 : 2000);
+    const t2 = setTimeout(() => onDone?.(), isOro ? 4500 : 2500);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── ORO: pantalla completa ──
+if (isOro) {
+  return (
+    <>
+      <style>{OVERLAY_KEYFRAMES}</style>
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 60,
+        background: "#000",
+        pointerEvents: "none",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        animation: phase === "in"
+        ? "oro-overlay-in 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards"
+        : "oro-overlay-out 0.5s ease-in forwards",
+      }}>
+        <img
+          src={gift.image}
+          alt={gift.name}
+          style={{
+            maxWidth: "100%",
+            maxHeight: "100%",
+            objectFit: "contain",
+            filter: `drop-shadow(0 0 60px ${gift.color})`,
+          }}
+        />
+        <div style={{
+          position: "absolute",
+          bottom: 60,
+          left: "50%",
+          transform: "translateX(-50%)",
+          background: `${gift.color}22`,
+          border: `1px solid ${gift.color}88`,
+          borderRadius: "24px",
+          padding: "6px 20px",
+          color: "#fff",
+          fontSize: "20px",
+          fontWeight: 700,
+          letterSpacing: "2px",
+          animation: "gift-name-in 0.4s ease-out 0.3s both",
+        }}>
+          {gift.name}
+        </div>
+      </div>
+    </>
+  );
+}
+
+  // ── RESTO DE GIFTS: comportamiento normal ──
   return (
     <>
       <style>{OVERLAY_KEYFRAMES}</style>
@@ -59,7 +119,7 @@ function GiftOverlay({ gift, onDone }) {
       }} />
 
       <div style={{
-        position: "fixed",
+        position: "relative",
         top: "50%", left: "50%",
         zIndex: 61,
         display: "flex", flexDirection: "column",
@@ -79,14 +139,13 @@ function GiftOverlay({ gift, onDone }) {
           }} />
         ))}
 
-        {/* ── IMAGEN o EMOJI según si el gift tiene imagen ── */}
         {gift.image ? (
           <img
             src={gift.image}
             alt={gift.name}
             style={{
-              width: 180,
-              height: 180,
+              width: 220,
+              height: 220,
               objectFit: "contain",
               filter: `drop-shadow(0 0 40px ${gift.color})`,
             }}

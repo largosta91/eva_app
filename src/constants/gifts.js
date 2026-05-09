@@ -10,5 +10,5 @@ export const GIFTS = [
   { id: 5, name: "Copa",     emoji: "🍷", image: "/copaTenor.webp",    cost: 50,   color: "#9b2335", soundKey: "copa"     },
   { id: 6, name: "Diamante", emoji: "💎", image: "/diamanteTenor.webp",cost: 100,  color: "#7c3aed", soundKey: "diamante" },
   { id: 7, name: "Anillo",   emoji: "💍", image: "/anilloTenor.gif",   cost: 250,  color: "#fbbf24", soundKey: "corona"   },
-  { id: 8, name: "ORO",      emoji: "💰", image: "/millionGold.gif",     cost: 1000, color: "#c9a84c", soundKey: "oro"      },
+  { id: 8, name: "ORO",      emoji: "💰", image: "/lluviadeoro.gif",     cost: 1000, color: "#c9a84c", soundKey: "oro"      },
 ];
