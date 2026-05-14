@@ -3,10 +3,12 @@ import { GIFTS } from "../../../constants/gifts";
 
 import sonidobasico from "../../../assets/sounds/sonidobasico.mp3";
 import rosa         from "../../../assets/sounds/rosa.mp3";
-import copadevino   from "../../../assets/sounds/copadevino.mp3";
+import copadevino   from "../../../assets/sounds/DandyCinzano.mp3";
 import diamante2    from "../../../assets/sounds/diamante2.mp3";
 import anillo       from "../../../assets/sounds/anillo.mp3";
 import bolsadeoro   from "../../../assets/sounds/bolsadeoro.mp3";
+import unicornio    from "../../../assets/sounds/unicornio.mp3";
+import Fenix        from "../../../assets/sounds/sonidoFenix.mp3";
 
 const SOUNDS = {
   basico:   sonidobasico,
@@ -15,6 +17,8 @@ const SOUNDS = {
   diamante: diamante2,
   corona:   anillo,
   oro:      bolsadeoro,
+  sonidoFenix: Fenix,
+  unicornio: unicornio
 };
 
 const GiftPanel = ({ onSend, onClose }) => {

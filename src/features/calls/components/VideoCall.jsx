@@ -47,67 +47,76 @@ function makeOverlayParticles(count) {
   }));
 }
 
+const isVideo = (src) => typeof src === "string" && src.endsWith(".mp4");
+
+function GiftMedia({ src, alt, style }) {
+  if (isVideo(src)) {
+    return <video src={src} autoPlay loop muted playsInline style={style} />;
+  }
+  return <img src={src} alt={alt} style={style} />;
+}
+
 function GiftOverlay({ gift, onDone }) {
   const [phase, setPhase] = useState("in");
   const [particles] = useState(() => makeOverlayParticles(24));
 
-  const isOro = gift.id === 8;
+  const isFullscreen = [8, 17, 18].includes(gift.id);
 
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase("out"), isOro ? 4000 : 2000);
-    const t2 = setTimeout(() => onDone?.(), isOro ? 4500 : 2500);
+    const t1 = setTimeout(() => setPhase("out"), isFullscreen ? 4000 : 2000);
+    const t2 = setTimeout(() => onDone?.(), isFullscreen ? 4500 : 2500);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── ORO: pantalla completa ──
-if (isOro) {
-  return (
-    <>
-      <style>{OVERLAY_KEYFRAMES}</style>
-      <div style={{
-        position: "fixed", inset: 0, zIndex: 60,
-        background: "#000",
-        pointerEvents: "none",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        animation: phase === "in"
-        ? "oro-overlay-in 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards"
-        : "oro-overlay-out 0.5s ease-in forwards",
-      }}>
-        <img
-          src={gift.image}
-          alt={gift.name}
-          style={{
-            maxWidth: "100%",
-            maxHeight: "100%",
-            objectFit: "contain",
-            filter: `drop-shadow(0 0 60px ${gift.color})`,
-          }}
-        />
+  // ── ORO / UNICORNIO / FÉNIX: pantalla completa ──
+  if (isFullscreen) {
+    return (
+      <>
+        <style>{OVERLAY_KEYFRAMES}</style>
         <div style={{
-          position: "absolute",
-          bottom: 60,
-          left: "50%",
-          transform: "translateX(-50%)",
-          background: `${gift.color}22`,
-          border: `1px solid ${gift.color}88`,
-          borderRadius: "24px",
-          padding: "6px 20px",
-          color: "#fff",
-          fontSize: "20px",
-          fontWeight: 700,
-          letterSpacing: "2px",
-          animation: "gift-name-in 0.4s ease-out 0.3s both",
+          position: "fixed", inset: 0, zIndex: 60,
+          background: "#000",
+          pointerEvents: "none",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          animation: phase === "in"
+            ? "oro-overlay-in 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards"
+            : "oro-overlay-out 0.5s ease-in forwards",
         }}>
-          {gift.name}
+          <GiftMedia
+            src={gift.image}
+            alt={gift.name}
+            style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            filter: `drop-shadow(0 0 60px ${gift.color})`,
+              }}
+          />
+          <div style={{
+            position: "absolute",
+            bottom: 60,
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: `${gift.color}22`,
+            border: `1px solid ${gift.color}88`,
+            borderRadius: "24px",
+            padding: "6px 20px",
+            color: "#fff",
+            fontSize: "20px",
+            fontWeight: 700,
+            letterSpacing: "2px",
+            animation: "gift-name-in 0.4s ease-out 0.3s both",
+          }}>
+            {gift.name}
+          </div>
         </div>
-      </div>
-    </>
-  );
-}
+      </>
+    );
+  }
 
-  // ── RESTO DE GIFTS: comportamiento normal ──
+  // ── RESTO DE GIFTS ──
   return (
     <>
       <style>{OVERLAY_KEYFRAMES}</style>
@@ -140,12 +149,12 @@ if (isOro) {
         ))}
 
         {gift.image ? (
-          <img
+          <GiftMedia
             src={gift.image}
             alt={gift.name}
             style={{
-              width: 220,
-              height: 220,
+              width: 340,
+              height: 340,
               objectFit: "contain",
               filter: `drop-shadow(0 0 40px ${gift.color})`,
             }}
@@ -223,7 +232,6 @@ export default function VideoCall({
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col overflow-hidden">
 
-      {/* ── VIDEO REMOTO ── */}
       <div className="absolute inset-0">
         <div className="w-full h-full flex items-center justify-center"
           style={{ background: "linear-gradient(135deg, #1a0830, #09080f)" }}>
@@ -231,7 +239,6 @@ export default function VideoCall({
         </div>
       </div>
 
-      {/* ── OVERLAY DEL REGALO EN EL CENTRO ── */}
       {activeGift && (
         <GiftOverlay
           gift={activeGift}
@@ -239,7 +246,6 @@ export default function VideoCall({
         />
       )}
 
-      {/* ── BARRA SUPERIOR ── */}
       <div
         className="absolute top-0 left-0 right-0 flex items-center justify-between px-5 py-4 z-10"
         style={{ background: "linear-gradient(to bottom, rgba(0,0,0,.7), transparent)" }}
@@ -253,7 +259,6 @@ export default function VideoCall({
         </div>
       </div>
 
-      {/* ── ESTADO CONECTANDO ── */}
       {status === "connecting" && (
         <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
           <div className="text-6xl mb-4">🌺</div>
@@ -265,7 +270,6 @@ export default function VideoCall({
         </div>
       )}
 
-      {/* ── VIDEO LOCAL ── */}
       <div className="absolute z-20 rounded-2xl overflow-hidden flex items-center justify-center"
         style={{ bottom: 140, right: 16, width: 100, height: 140, background: "#1a1826", border: "2px solid rgba(255,255,255,.2)" }}>
         <span style={{ fontSize: 40, filter: camOff ? "grayscale(1) opacity(.3)" : "none" }}>
@@ -273,7 +277,6 @@ export default function VideoCall({
         </span>
       </div>
 
-      {/* ── BOTÓN DE REGALOS ── */}
       <div className="absolute z-20" style={{ bottom: 120, left: 20 }}>
         <button
           onClick={() => setShowGifts(true)}
@@ -287,7 +290,6 @@ export default function VideoCall({
         </button>
       </div>
 
-      {/* ── BOTÓN MINI CHAT ── */}
       <div className="absolute z-20" style={{ bottom: 120, left: 80 }}>
         <button
           onClick={() => setShowChat(c => !c)}
@@ -315,7 +317,6 @@ export default function VideoCall({
         onEnd={handleEnd}
       />
 
-      {/* ── PANEL DE REGALOS ── */}
       {showGifts && (
         <GiftPanel
           context="call"
@@ -326,7 +327,6 @@ export default function VideoCall({
         />
       )}
 
-      {/* ── MINI CHAT OVERLAY ── */}
       {showChat && (
         <MiniChat theme={theme} onClose={() => setShowChat(false)} />
       )}
