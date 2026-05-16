@@ -1,29 +1,9 @@
 import { useEffect, useRef } from "react";
 import { GIFTS } from "../../../constants/gifts";
-
-import sonidobasico from "../../../assets/sounds/sonidobasico.mp3";
-import rosa         from "../../../assets/sounds/rosa.mp3";
-import copadevino   from "../../../assets/sounds/DandyCinzano.mp3";
-import diamante2    from "../../../assets/sounds/diamante2.mp3";
-import anillo       from "../../../assets/sounds/anillo.mp3";
-import bolsadeoro   from "../../../assets/sounds/bolsadeoro.mp3";
-import unicornio    from "../../../assets/sounds/unicornio.mp3";
-import Fenix        from "../../../assets/sounds/sonidoFenix.mp3";
-
-const SOUNDS = {
-  basico:   sonidobasico,
-  rosa:     rosa,
-  copa:     copadevino,
-  diamante: diamante2,
-  corona:   anillo,
-  oro:      bolsadeoro,
-  sonidoFenix: Fenix,
-  unicornio: unicornio
-};
-
+ 
 const GiftPanel = ({ onSend, onClose }) => {
   const scrollRef = useRef(null);
-
+ 
   useEffect(() => {
     let mounted = true;
     const timer = setTimeout(() => {
@@ -39,16 +19,7 @@ const GiftPanel = ({ onSend, onClose }) => {
       clearTimeout(timer);
     };
   }, []);
-
-  const handleSend = (gift) => {
-    const soundSrc = SOUNDS[gift.soundKey];
-    if (soundSrc) {
-      const audio = new Audio(soundSrc);
-      audio.play().catch(() => {});
-    }
-    onSend?.(gift);
-  };
-
+ 
   return (
     <div
       style={{
@@ -77,7 +48,7 @@ const GiftPanel = ({ onSend, onClose }) => {
         {GIFTS.map((gift) => (
           <button
             key={gift.id}
-            onClick={() => handleSend(gift)}
+            onClick={() => onSend?.(gift)}
             style={{
               display: "flex",
               flexDirection: "column",
@@ -103,7 +74,7 @@ const GiftPanel = ({ onSend, onClose }) => {
         ))}
         <div style={{ minWidth: "20px", height: "10px" }} />
       </div>
-
+ 
       <button
         onClick={onClose}
         style={{

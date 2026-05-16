@@ -5,12 +5,19 @@ import GiftPanel from './GiftPanel';
 import { supabase } from '../../../services/api/supabase';
 
 const SOUNDS = {
-  basico:   new URL("../../../assets/sounds/sonidobasico.mp3", import.meta.url).href,
-  rosa:     new URL("../../../assets/sounds/rosa.mp3",         import.meta.url).href,
-  copa:     new URL("../../../assets/sounds/copadevino.mp3",   import.meta.url).href,
-  diamante: new URL("../../../assets/sounds/diamante2.mp3",    import.meta.url).href,
-  anillo:   new URL("../../../assets/sounds/anillo.mp3",       import.meta.url).href,
-  oro:      new URL("../../../assets/sounds/bolsadeoro.mp3",   import.meta.url).href,
+  basico:      new URL("../../../assets/sounds/sonidobasico.mp3", import.meta.url).href,
+  rosa:        new URL("../../../assets/sounds/rosa.mp3",         import.meta.url).href,
+  copa:        new URL("../../../assets/sounds/DandyCinzano.mp3", import.meta.url).href,
+  diamante:    new URL("../../../assets/sounds/diamante2.mp3",    import.meta.url).href,
+  corona:      new URL("../../../assets/sounds/anillo.mp3",       import.meta.url).href,
+  oro:         new URL("../../../assets/sounds/bolsadeoro.mp3",   import.meta.url).href,
+  unicornio:   new URL("../../../assets/sounds/unicornio.mp3",    import.meta.url).href,
+  sonidoFenix: new URL("../../../assets/sounds/sonidoFenix.mp3",  import.meta.url).href,
+  japonTokio:  new URL("../../../assets/sounds/japonTokio.mp3",   import.meta.url).href,
+  helicopter:  new URL("../../../assets/sounds/helicopter.mp3",   import.meta.url).href,
+  avion:       new URL("../../../assets/sounds/avion.mp3",        import.meta.url).href,
+  winner:      new URL("../../../assets/sounds/winner.mp3",       import.meta.url).href,
+  copaDeOro:   new URL("../../../assets/sounds/copaDeOro.mp3",    import.meta.url).href,
 };
 
 const playGiftSound = (soundKey) => {
