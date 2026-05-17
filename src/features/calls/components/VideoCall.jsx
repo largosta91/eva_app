@@ -4,43 +4,42 @@ import GiftPanel                       from "../../chat/components/GiftPanel";
 import CallControls                    from "./CallControls";
 import MiniChat                        from "./MiniChat.jsx";
 import { supabase }                    from "../../../services/api/supabase";
-
+ 
 import sonidobasico from "../../../assets/sounds/sonidobasico.mp3";
 import rosa         from "../../../assets/sounds/rosa.mp3";
-import copadevino   from "../../../assets/sounds/DandyCinzano.mp3";
-import diamante2    from "../../../assets/sounds/diamante2.mp3";
+import copa         from "../../../assets/sounds/dandy.mp3";
+import diamante      from "../../../assets/sounds/diamante.mp3";
 import anillo       from "../../../assets/sounds/anillo.mp3";
-import bolsadeoro   from "../../../assets/sounds/bolsadeoro.mp3";
+import asombro      from "../../../assets/sounds/asombro.mp3";
 import unicornio    from "../../../assets/sounds/unicornio.mp3";
 import Fenix        from "../../../assets/sounds/sonidoFenix.mp3";
 import japonTokio   from "../../../assets/sounds/japonTokio.mp3";
 import helicopter   from "../../../assets/sounds/helicopter.mp3";
 import avion        from "../../../assets/sounds/avion.mp3";
-import winner       from "../../../assets/sounds/winner.mp3";
-import copaDeOro    from "../../../assets/sounds/copaDeOro.mp3";
-
+import tragamoneda  from "../../../assets/sounds/tragamoneda.mp3";
+import pirotecnia  from "../../../assets/sounds/pirotecnia.mp3";
+ 
 const SOUNDS = {
   basico:      sonidobasico,
   rosa:        rosa,
-  copa:        copadevino,
-  diamante:    diamante2,
-  corona:      anillo,
-  oro:         bolsadeoro,
-  unicornio:   unicornio,
-  sonidoFenix: Fenix,
+  copa:        copa,
+  diamante:    diamante,
+  anillo:      anillo,
+  asombro:     asombro,
   japonTokio:  japonTokio,
   helicopter:  helicopter,
   avion:       avion,
-  winner:      winner,
-  copaDeOro:   copaDeOro,
+  pirotecnia:  pirotecnia,
+  tragamoneda: tragamoneda,
+  unicornio:   unicornio,
+  sonidoFenix: Fenix
 };
-
+ 
 const playGiftSound = (soundKey) => {
   const src = SOUNDS[soundKey];
   if (!src) return;
   new Audio(src).play().catch(() => {});
 };
- 
  
 const OVERLAY_KEYFRAMES = `
   @keyframes gift-overlay-in {
@@ -97,65 +96,20 @@ function GiftOverlay({ gift, onDone }) {
   const [phase, setPhase] = useState("in");
   const [particles] = useState(() => makeOverlayParticles(24));
  
-  const isFullscreen = [8, 17, 18].includes(gift.id);
-  const isMedium     = gift.id === 11;
+  
+  const isFullscreen = [11,17, 18].includes(gift.id);
+
+  const isLarge      = [12, 13, 14, 15, 16].includes(gift.id);
+  
  
   useEffect(() => {
-    const showMs = gift.duration ?? (isFullscreen || isMedium ? 4000 : 2000);
+    const showMs = gift.duration ?? (isFullscreen || isLarge ? 4000 : 2000);
     const t1 = setTimeout(() => setPhase("out"), showMs);
     const t2 = setTimeout(() => onDone?.(), showMs + 500);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
  
-  // ── AUTO: pantalla casi completa (85%) ──
-  if (isMedium) {
-    return (
-      <>
-        <style>{OVERLAY_KEYFRAMES}</style>
-        <div style={{
-          position: "fixed", inset: 0, zIndex: 60,
-          background: "#000",
-          pointerEvents: "none",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          animation: phase === "in"
-            ? "oro-overlay-in 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards"
-            : "oro-overlay-out 0.5s ease-in forwards",
-        }}>
-          <GiftMedia
-            src={gift.image}
-            alt={gift.name}
-            style={{
-              width: "85%",
-              height: "85%",
-              objectFit: "contain",
-              filter: `drop-shadow(0 0 60px ${gift.color})`,
-            }}
-          />
-          <div style={{
-            position: "absolute",
-            bottom: 60,
-            left: "50%",
-            transform: "translateX(-50%)",
-            background: `${gift.color}22`,
-            border: `1px solid ${gift.color}88`,
-            borderRadius: "24px",
-            padding: "6px 20px",
-            color: "#fff",
-            fontSize: "20px",
-            fontWeight: 700,
-            letterSpacing: "2px",
-            animation: "gift-name-in 0.4s ease-out 0.3s both",
-          }}>
-            {gift.name}
-          </div>
-        </div>
-      </>
-    );
-  }
- 
-  // ── ORO / UNICORNIO / FÉNIX: pantalla completa ──
+  // ── GRUPO 1: pantalla completa ──
   if (isFullscreen) {
     return (
       <>
@@ -203,7 +157,55 @@ function GiftOverlay({ gift, onDone }) {
     );
   }
  
-  // ── RESTO DE GIFTS ──
+  // ── GRUPO 2: pantalla grande 85% ──
+  if (isLarge) {
+    return (
+      <>
+        <style>{OVERLAY_KEYFRAMES}</style>
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 60,
+          background: "#000",
+          pointerEvents: "none",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          animation: phase === "in"
+            ? "oro-overlay-in 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards"
+            : "oro-overlay-out 0.5s ease-in forwards",
+        }}>
+          <GiftMedia
+            src={gift.image}
+            alt={gift.name}
+            style={{
+              width: "95%",
+              height: "100%",
+              objectFit: "contain",
+              filter: `drop-shadow(0 0 60px ${gift.color})`,
+            }}
+          />
+          <div style={{
+            position: "absolute",
+            bottom: 60,
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: `${gift.color}22`,
+            border: `1px solid ${gift.color}88`,
+            borderRadius: "24px",
+            padding: "6px 20px",
+            color: "#fff",
+            fontSize: "20px",
+            fontWeight: 700,
+            letterSpacing: "2px",
+            animation: "gift-name-in 0.4s ease-out 0.3s both",
+          }}>
+            {gift.name}
+          </div>
+        </div>
+      </>
+    );
+  }
+ 
+  // ── GRUPO 3: tamaño normal con confetti ──
   return (
     <>
       <style>{OVERLAY_KEYFRAMES}</style>
@@ -240,8 +242,8 @@ function GiftOverlay({ gift, onDone }) {
             src={gift.image}
             alt={gift.name}
             style={{
-              width: 340,
-              height: 340,
+              width: "75%",
+              height: "75%",
               objectFit: "contain",
               filter: `drop-shadow(0 0 40px ${gift.color})`,
             }}
@@ -317,21 +319,22 @@ export default function VideoCall({
  
   // ── Enviar regalo y descontar en Supabase ──
   const sendGift = async (gift) => {
-  if (credits < gift.cost) return;
-
-  const newCredits = credits - gift.cost;
-  const { error } = await supabase
-    .from("users")
-    .update({ credits: newCredits })
-    .eq("id", user.id);
-
-  if (error) { console.error("Error descontando créditos:", error); return; }
-
-  playGiftSound(gift.soundKey); // ← acá
-  setCredits(newCredits);
-  setShowGifts(false);
-  setActiveGift(gift);
-};
+    if (credits < gift.cost) return;
+ 
+    const newCredits = credits - gift.cost;
+    const { error } = await supabase
+      .from("users")
+      .update({ credits: newCredits })
+      .eq("id", user.id);
+ 
+    if (error) { console.error("Error descontando créditos:", error); return; }
+ 
+    playGiftSound(gift.soundKey);
+    setCredits(newCredits);
+    setShowGifts(false);
+    setActiveGift(gift);
+    console.log("Regalo enviado:", gift);
+  };
  
   const handleEnd = () => {
     setStatus("ended");
