@@ -16,6 +16,9 @@ import helicopter   from "../../../assets/sounds/helicopter.mp3";
 import avion        from "../../../assets/sounds/avion.mp3";
 import tragamoneda  from "../../../assets/sounds/tragamoneda.mp3";
 import pirotecnia   from "../../../assets/sounds/pirotecnia.mp3";
+import chocolate    from "../../../assets/sounds/wow.mp3";
+import oso          from "../../../assets/sounds/oso.mp3";
+import colibri      from "../../../assets/sounds/colibri.mp3";
 
 // ── Sonidos ──────────────────────────────────────────────────────────────────
 const SOUNDS = {
@@ -32,6 +35,9 @@ const SOUNDS = {
   tragamoneda: tragamoneda,
   unicornio:   unicornio,
   sonidoFenix: Fenix,
+  chocolate:   chocolate,
+  oso:         oso,
+  colibri:     colibri,
 };
 
 const playGiftSound = (soundKey) => {
@@ -92,13 +98,15 @@ function GiftMedia({ src, alt, style }) {
   return <img src={src} alt={alt} style={style} />;
 }
 
-// ── GiftOverlay (idéntico a VideoCall) ───────────────────────────────────────
+// ── GiftOverlay — idéntico a VideoCall ───────────────────────────────────────
+// zIndex usa 9998/9999 para quedar encima del MiniChat (z:30) y de todo lo demás
 function GiftOverlay({ gift, onDone }) {
   const [phase, setPhase] = useState("in");
   const [particles] = useState(() => makeOverlayParticles(24));
 
-  const isFullscreen = [11, 17, 18].includes(gift.id);
-  const isLarge      = [12, 13, 14, 15, 16].includes(gift.id);
+  // Mismos IDs que VideoCall
+  const isFullscreen = [3, 8, 11, 17, 18].includes(gift.id);
+  const isLarge      = [10, 12, 13, 14, 15, 16, 19].includes(gift.id);
 
   useEffect(() => {
     const showMs = gift.duration ?? (isFullscreen || isLarge ? 4000 : 2000);
@@ -107,7 +115,7 @@ function GiftOverlay({ gift, onDone }) {
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // GRUPO 1: pantalla completa
+  // ── GRUPO 1: pantalla completa ──
   if (isFullscreen) {
     return (
       <>
@@ -126,26 +134,20 @@ function GiftOverlay({ gift, onDone }) {
           <GiftMedia
             src={gift.image}
             alt={gift.name}
-            style={{ width: "100%", height: "100%", objectFit: "cover", filter: `drop-shadow(0 0 60px ${gift.color})` }}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              filter: `drop-shadow(0 0 60px ${gift.color})`,
+            }}
           />
-          <div style={{
-            position: "absolute", bottom: 60, left: "50%",
-            transform: "translateX(-50%)",
-            background: `${gift.color}22`,
-            border: `1px solid ${gift.color}88`,
-            borderRadius: "24px", padding: "6px 20px",
-            color: "#fff", fontSize: "20px", fontWeight: 700,
-            letterSpacing: "2px",
-            animation: "gift-name-in 0.4s ease-out 0.3s both",
-          }}>
-            {gift.name}
-          </div>
+          {/* Sin nombre en fullscreen — igual que VideoCall */}
         </div>
       </>
     );
   }
 
-  // GRUPO 2: pantalla grande 95%
+  // ── GRUPO 2: pantalla grande ──
   if (isLarge) {
     return (
       <>
@@ -164,49 +166,46 @@ function GiftOverlay({ gift, onDone }) {
           <GiftMedia
             src={gift.image}
             alt={gift.name}
-            style={{ width: "95%", height: "100%", objectFit: "contain", filter: `drop-shadow(0 0 60px ${gift.color})` }}
+            style={{
+              width: "min(85vw, 80vh)",
+              height: "min(85vw, 95vh)",
+              objectFit: "contain",
+              filter: `drop-shadow(0 0 60px ${gift.color})`,
+            }}
           />
-          <div style={{
-            position: "absolute", bottom: 60, left: "50%",
-            transform: "translateX(-50%)",
-            background: `${gift.color}22`,
-            border: `1px solid ${gift.color}88`,
-            borderRadius: "24px", padding: "6px 20px",
-            color: "#fff", fontSize: "20px", fontWeight: 700,
-            letterSpacing: "2px",
-            animation: "gift-name-in 0.4s ease-out 0.3s both",
-          }}>
-            {gift.name}
-          </div>
         </div>
       </>
     );
   }
 
-  // GRUPO 3: normal con confetti
+  // ── GRUPO 3: tamaño normal con confetti ──
   return (
     <>
       <style>{OVERLAY_KEYFRAMES}</style>
 
+      {/* Fondo oscuro */}
       <div style={{
         position: "fixed", inset: 0, zIndex: 9998,
         background: "rgba(0,0,0,0.45)",
         pointerEvents: "none",
       }} />
 
+      {/* Contenedor centrado — igual que VideoCall pero con position:fixed */}
       <div style={{
         position: "fixed",
-        top: "50%", left: "50%",
-        width: "280px",
-        height: "280px",
+        top: "50%",
+        left: "50%",
         zIndex: 9999,
-        display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center", gap: "12px",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "12px",
         pointerEvents: "none",
         animation: phase === "in"
           ? "gift-overlay-in 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards"
           : "gift-overlay-out 0.5s ease-in forwards",
       }}>
+        {/* Confetti */}
         {particles.map(p => (
           <div key={p.id} style={{
             position: "absolute", top: "50%", left: "50%",
@@ -217,27 +216,28 @@ function GiftOverlay({ gift, onDone }) {
           }} />
         ))}
 
+        {/* Imagen o emoji */}
         {gift.image ? (
           <GiftMedia
             src={gift.image}
             alt={gift.name}
-            style={{ width: "220px", height: "220px", objectFit: "contain", filter: `drop-shadow(0 0 40px ${gift.color})` }}
+            style={{
+              width: "75vw",
+              height: "75vw",
+              maxWidth: "340px",
+              maxHeight: "340px",
+              objectFit: "contain",
+              filter: `drop-shadow(0 0 40px ${gift.color})`,
+            }}
           />
         ) : (
-          <span style={{ fontSize: "120px", lineHeight: 1, filter: `drop-shadow(0 0 40px ${gift.color})` }}>
+          <span style={{
+            fontSize: "120px", lineHeight: 1,
+            filter: `drop-shadow(0 0 40px ${gift.color})`,
+          }}>
             {gift.emoji}
           </span>
         )}
-
-        <div style={{
-          background: `${gift.color}22`,
-          border: `1px solid ${gift.color}88`,
-          borderRadius: "24px", padding: "6px 20px",
-          color: "#fff", fontSize: "16px", fontWeight: 600,
-          animation: "gift-name-in 0.4s ease-out 0.3s both",
-        }}>
-          {gift.name}
-        </div>
       </div>
     </>
   );
@@ -260,11 +260,11 @@ const fetchTranslation = async (text) => {
 
 // ── MiniChat ──────────────────────────────────────────────────────────────────
 export default function MiniChat({ theme = "dark", onClose, role = "user" }) {
-  const [messages, setMessages]       = useState([]);
-  const [text, setText]               = useState("");
+  const [messages, setMessages]           = useState([]);
+  const [text, setText]                   = useState("");
   const [showGiftPanel, setShowGiftPanel] = useState(false);
   const [translateEnabled, setTranslateEnabled] = useState(false);
-  const [activeGift, setActiveGift]   = useState(null);
+  const [activeGift, setActiveGift]       = useState(null);
 
   const bottomRef    = useRef(null);
   const translateRef = useRef(translateEnabled);
@@ -288,12 +288,9 @@ export default function MiniChat({ theme = "dark", onClose, role = "user" }) {
   const handleKeyDown = (e) => { if (e.key === "Enter") handleSend(); };
 
   const handleGiftSend = (gift) => {
-    // Dispara el overlay + sonido (igual que VideoCall)
     playGiftSound(gift.soundKey);
     setActiveGift(gift);
     setShowGiftPanel(false);
-
-    // También agrega el mensaje al historial del chat
     setMessages(prev => [
       ...prev,
       { id: Date.now(), text: `${gift.emoji} ${gift.name}`, sender: "me" }
@@ -315,7 +312,7 @@ export default function MiniChat({ theme = "dark", onClose, role = "user" }) {
 
   return (
     <>
-      {/* Overlay de regalo — fuera del div del chat para poder ser fullscreen */}
+      {/* Overlay fuera del div del chat para ser fullscreen real */}
       {activeGift && (
         <GiftOverlay
           gift={activeGift}

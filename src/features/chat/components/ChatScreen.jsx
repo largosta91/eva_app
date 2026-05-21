@@ -17,7 +17,6 @@ const SOUNDS = {
   helicopter:  new URL("../../../assets/sounds/helicopter.mp3",   import.meta.url).href,
   avion:       new URL("../../../assets/sounds/avion.mp3",        import.meta.url).href,
   tragamoneda: new URL("../../../assets/sounds/tragamoneda.mp3",  import.meta.url).href,
-  copaDeOro:   new URL("../../../assets/sounds/copaDeOro.mp3",    import.meta.url).href,
   pirotecnia:   new URL("../../../assets/sounds/pirotecnia.mp3",  import.meta.url).href,
 };
 

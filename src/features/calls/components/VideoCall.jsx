@@ -7,6 +7,7 @@ import { supabase }                    from "../../../services/api/supabase";
  
 import sonidobasico from "../../../assets/sounds/sonidobasico.mp3";
 import rosa         from "../../../assets/sounds/rosa.mp3";
+import chocolate    from "../../../assets/sounds/wow.mp3";
 import copa         from "../../../assets/sounds/dandy.mp3";
 import diamante      from "../../../assets/sounds/diamante.mp3";
 import anillo       from "../../../assets/sounds/anillo.mp3";
@@ -18,13 +19,19 @@ import helicopter   from "../../../assets/sounds/helicopter.mp3";
 import avion        from "../../../assets/sounds/avion.mp3";
 import tragamoneda  from "../../../assets/sounds/tragamoneda.mp3";
 import pirotecnia  from "../../../assets/sounds/pirotecnia.mp3";
+import oso          from "../../../assets/sounds/oso.mp3";
+import colibri     from "../../../assets/sounds/colibri.mp3";
+
  
 const SOUNDS = {
   basico:      sonidobasico,
   rosa:        rosa,
+  chocolate:   chocolate,
   copa:        copa,
   diamante:    diamante,
   anillo:      anillo,
+  oso:         oso,
+  colibri:     colibri,
   asombro:     asombro,
   japonTokio:  japonTokio,
   helicopter:  helicopter,
@@ -97,9 +104,9 @@ function GiftOverlay({ gift, onDone }) {
   const [particles] = useState(() => makeOverlayParticles(24));
  
   
-  const isFullscreen = [11,17, 18].includes(gift.id);
+  const isFullscreen = [3,8,11,17, 18].includes(gift.id);
 
-  const isLarge      = [12, 13, 14, 15, 16].includes(gift.id);
+  const isLarge      = [10,12, 13, 14, 15, 16,19].includes(gift.id);
   
  
   useEffect(() => {
@@ -150,7 +157,6 @@ function GiftOverlay({ gift, onDone }) {
             letterSpacing: "2px",
             animation: "gift-name-in 0.4s ease-out 0.3s both",
           }}>
-            {gift.name}
           </div>
         </div>
       </>
@@ -158,53 +164,37 @@ function GiftOverlay({ gift, onDone }) {
   }
  
   // ── GRUPO 2: pantalla grande 85% ──
-  if (isLarge) {
-    return (
-      <>
-        <style>{OVERLAY_KEYFRAMES}</style>
-        <div style={{
-          position: "fixed", inset: 0, zIndex: 60,
-          background: "#000",
-          pointerEvents: "none",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          animation: phase === "in"
-            ? "oro-overlay-in 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards"
-            : "oro-overlay-out 0.5s ease-in forwards",
-        }}>
-          <GiftMedia
-            src={gift.image}
-            alt={gift.name}
-            style={{
-              width: "95%",
-              height: "100%",
-              objectFit: "contain",
-              filter: `drop-shadow(0 0 60px ${gift.color})`,
-            }}
-          />
-          <div style={{
-            position: "absolute",
-            bottom: 60,
-            left: "50%",
-            transform: "translateX(-50%)",
-            background: `${gift.color}22`,
-            border: `1px solid ${gift.color}88`,
-            borderRadius: "24px",
-            padding: "6px 20px",
-            color: "#fff",
-            fontSize: "20px",
-            fontWeight: 700,
-            letterSpacing: "2px",
-            animation: "gift-name-in 0.4s ease-out 0.3s both",
-          }}>
-            {gift.name}
-          </div>
-        </div>
-      </>
-    );
-  }
- 
+ // ── GRUPO 2: pantalla grande 85% ──
+if (isLarge) {
+  return (
+    <>
+      <style>{OVERLAY_KEYFRAMES}</style>
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 60,
+        background: "#000",
+        pointerEvents: "none",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        animation: phase === "in"
+          ? "oro-overlay-in 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards"
+          : "oro-overlay-out 0.5s ease-in forwards",
+      }}>
+        <GiftMedia
+          src={gift.image}
+          alt={gift.name}
+          style={{
+            width: "min(85vw, 80vh)",   // ← ocupa 85% del lado más corto
+            height: "min(85vw, 95vh)",
+            objectFit: "contain",
+            filter: `drop-shadow(0 0 60px ${gift.color})`,
+          }}
+        />
+      </div>
+    </>
+  );
+}
+
   // ── GRUPO 3: tamaño normal con confetti ──
   return (
     <>
@@ -256,19 +246,6 @@ function GiftOverlay({ gift, onDone }) {
             {gift.emoji}
           </span>
         )}
- 
-        <div style={{
-          background: `${gift.color}22`,
-          border: `1px solid ${gift.color}88`,
-          borderRadius: "24px",
-          padding: "6px 20px",
-          color: "#fff",
-          fontSize: "16px",
-          fontWeight: 600,
-          animation: "gift-name-in 0.4s ease-out 0.3s both",
-        }}>
-          {gift.name}
-        </div>
       </div>
     </>
   );
