@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import MessageBubble from "../../chat/components/MessageBubble.jsx";
 import GiftPanel from "../../chat/components/GiftPanel.jsx";
 import Input from "../../../components/ui/Input.jsx";
+import { supabase } from "../../../services/api/supabase";
 
 import sonidobasico from "../../../assets/sounds/sonidobasico.mp3";
 import rosa         from "../../../assets/sounds/rosa.mp3";
@@ -259,12 +260,13 @@ const fetchTranslation = async (text) => {
 };
 
 // ── MiniChat ──────────────────────────────────────────────────────────────────
-export default function MiniChat({ theme = "dark", onClose, role = "user" }) {
+export default function MiniChat({ theme = "dark", onClose, role = "user", creator, credits, onCreditsUpdate }) {
   const [messages, setMessages]           = useState([]);
   const [text, setText]                   = useState("");
   const [showGiftPanel, setShowGiftPanel] = useState(false);
   const [translateEnabled, setTranslateEnabled] = useState(false);
   const [activeGift, setActiveGift]       = useState(null);
+  const [sending, setSending]             = useState(false);
 
   const bottomRef    = useRef(null);
   const translateRef = useRef(translateEnabled);
@@ -287,7 +289,46 @@ export default function MiniChat({ theme = "dark", onClose, role = "user" }) {
 
   const handleKeyDown = (e) => { if (e.key === "Enter") handleSend(); };
 
-  const handleGiftSend = (gift) => {
+  // ── Enviar regalo seguro via RPC — el costo lo decide Postgres, nunca el frontend ──
+  const handleGiftSend = async (gift) => {
+    if (!creator?.id) {
+      console.error("No hay creator definido");
+      return;
+    }
+
+    // Verificación optimista local (el backend igual valida con FOR UPDATE)
+    if (credits < gift.cost) {
+      console.warn("Créditos insuficientes");
+      return;
+    }
+
+    if (sending) return; // evitar doble tap
+    setSending(true);
+
+    const { data, error } = await supabase.rpc("send_gift", {
+      p_creator_id: creator.id,
+      p_gift_name:  gift.name,
+      // sin p_gift_cost ni p_gift_emoji — el costo lo decide Postgres
+    });
+
+    setSending(false);
+
+    if (error) {
+      console.error("Error enviando regalo:", error);
+      return;
+    }
+
+    if (!data.ok) {
+      if (data.error === "insufficient_credits") {
+        console.warn("Créditos insuficientes (backend)");
+      } else {
+        console.error("Error del backend:", data.error);
+      }
+      return;
+    }
+
+    // UI solo se actualiza si el backend confirmó
+    onCreditsUpdate?.(data.credits_remaining);
     playGiftSound(gift.soundKey);
     setActiveGift(gift);
     setShowGiftPanel(false);
@@ -306,7 +347,8 @@ export default function MiniChat({ theme = "dark", onClose, role = "user" }) {
     borderRadius: "999px",
     color: "#09080f",
     fontWeight: 700,
-    cursor: "pointer",
+    cursor: sending ? "not-allowed" : "pointer",
+    opacity: sending ? 0.6 : 1,
     minWidth: 0,
   };
 
@@ -398,7 +440,12 @@ export default function MiniChat({ theme = "dark", onClose, role = "user" }) {
           />
           <button onClick={handleSend} style={btnStyle}>➤</button>
           {role === "user" && (
-            <button onClick={() => setShowGiftPanel(!showGiftPanel)} style={btnStyle}>🎁</button>
+            <button
+              onClick={() => !sending && setShowGiftPanel(!showGiftPanel)}
+              style={btnStyle}
+            >
+              🎁
+            </button>
           )}
         </div>
 

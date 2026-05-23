@@ -162,8 +162,6 @@ function GiftOverlay({ gift, onDone }) {
       </>
     );
   }
- 
-  // ── GRUPO 2: pantalla grande 85% ──
  // ── GRUPO 2: pantalla grande 85% ──
 if (isLarge) {
   return (
@@ -250,16 +248,17 @@ if (isLarge) {
     </>
   );
 }
- 
+//------------------------consulta de credito-----------------------------//
 const fmtTime = s =>
   `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
- 
+
 export default function VideoCall({
   user    = { id: "mock_user_1",    name: "Carlos", credits: 0 },
   creator = { id: "mock_creator_1", name: "Sofía",  avatar: null },
   onEnd,
   theme = "dark",
 }) {
+
   const [secs, setSecs]             = useState(0);
   const [status, setStatus]         = useState("connecting");
   const [credits, setCredits]       = useState(0);
@@ -268,118 +267,229 @@ export default function VideoCall({
   const [showGifts, setShowGifts]   = useState(false);
   const [activeGift, setActiveGift] = useState(null);
   const [showChat, setShowChat]     = useState(false);
- 
+
   const _localVideoRef  = useRef(null);
   const _remoteVideoRef = useRef(null);
- 
+
   // ── Cargar créditos reales desde Supabase ──
   useEffect(() => {
-    supabase
-      .from("users")
-      .select("credits")
-      .eq("id", user.id)
-      .single()
-      .then(({ data }) => { if (data) setCredits(data.credits); });
+
+    const loadCredits = async () => {
+
+      const { data, error } = await supabase
+        .from("users")
+        .select("credits")
+        .eq("id", user.id)
+        .single();
+
+      if (error) {
+        console.error("Error cargando créditos:", error);
+        return;
+      }
+
+      if (data) setCredits(data.credits);
+    };
+
+    loadCredits();
+
   }, [user.id]);
- 
-  // ── Timer de llamada ──
+
+
+  // ── Timer visual de llamada ──
+  // El cobro real por minuto va en backend (charge_call_minute)
   useEffect(() => {
-    const t1 = setTimeout(() => setStatus("connected"), 1500);
+
+    const t1 = setTimeout(() => {
+      setStatus("connected");
+    }, 1500);
+
     const t2 = setInterval(() => {
-      setSecs(prev => {
-        if ((prev + 1) % 30 === 0) setCredits(c => Math.max(0, c - 1));
-        return prev + 1;
-      });
+      setSecs(prev => prev + 1);
     }, 1000);
-    return () => { clearTimeout(t1); clearInterval(t2); };
+
+    return () => {
+      clearTimeout(t1);
+      clearInterval(t2);
+    };
+
   }, []);
- 
-  // ── Enviar regalo y descontar en Supabase ──
+
+
+  // ── Enviar regalo seguro usando RPC ──
   const sendGift = async (gift) => {
-    if (credits < gift.cost) return;
- 
-    const newCredits = credits - gift.cost;
-    const { error } = await supabase
-      .from("users")
-      .update({ credits: newCredits })
-      .eq("id", user.id);
- 
-    if (error) { console.error("Error descontando créditos:", error); return; }
- 
+
+    // Verificación visual optimista (el backend igual valida)
+    if (credits < gift.cost) {
+      console.warn("Créditos insuficientes");
+      return;
+    }
+
+    const { data, error } = await supabase.rpc("send_gift", {
+      p_creator_id: creator.id,
+      p_gift_name:  gift.name,
+      // sin p_gift_cost ni p_gift_emoji — el costo lo decide Postgres
+    });
+
+    if (error) {
+      console.error("Error enviando regalo:", error);
+      return;
+    }
+
+    if (!data.ok) {
+      if (data.error === "insufficient_credits") {
+        console.warn("Créditos insuficientes (backend)");
+      } else {
+        console.error("Error del backend:", data.error);
+      }
+      return;
+    }
+
+    // Actualizar UI con el valor real devuelto por el backend
+    setCredits(data.credits_remaining);
+
     playGiftSound(gift.soundKey);
-    setCredits(newCredits);
-    setShowGifts(false);
     setActiveGift(gift);
-    console.log("Regalo enviado:", gift);
+    setShowGifts(false);
+
+    console.log("Regalo enviado:", gift.name, "| Créditos restantes:", data.credits_remaining);
   };
- 
+
+
+  // ── Finalizar llamada ──
   const handleEnd = () => {
     setStatus("ended");
     onEnd?.();
   };
- 
+
+//----------------------------------------------------------------------------------//
+
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col overflow-hidden">
- 
+
       <div className="absolute inset-0">
-        <div className="w-full h-full flex items-center justify-center"
-          style={{ background: "linear-gradient(135deg, #1a0830, #09080f)" }}>
-          <span style={{ fontSize: 160, opacity: 0.15 }}>💫</span>
+        <div
+          className="w-full h-full flex items-center justify-center"
+          style={{
+            background: "linear-gradient(135deg, #1a0830, #09080f)"
+          }}
+        >
+          <span style={{ fontSize: 160, opacity: 0.15 }}>
+            💫
+          </span>
         </div>
       </div>
- 
+
       {activeGift && (
         <GiftOverlay
           gift={activeGift}
           onDone={() => setActiveGift(null)}
         />
       )}
- 
+
       <div
         className="absolute top-0 left-0 right-0 flex items-center justify-between px-5 py-4 z-10"
-        style={{ background: "linear-gradient(to bottom, rgba(0,0,0,.7), transparent)" }}
+        style={{
+          background:
+            "linear-gradient(to bottom, rgba(0,0,0,.7), transparent)"
+        }}
       >
-        <div className="text-white font-mono text-base font-semibold">{fmtTime(secs)}</div>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full"
-          style={{ background: "rgba(201,168,76,.2)", border: "1px solid rgba(201,168,76,.4)" }}>
+        <div className="text-white font-mono text-base font-semibold">
+          {fmtTime(secs)}
+        </div>
+
+        <div
+          className="flex items-center gap-2 px-3 py-1.5 rounded-full"
+          style={{
+            background: "rgba(201,168,76,.2)",
+            border: "1px solid rgba(201,168,76,.4)"
+          }}
+        >
           <span className="text-sm">💎</span>
-          <span className="text-[#c9a84c] text-xs font-bold">{credits}</span>
-          <span className="text-[#7a748f] text-xs">· −2/min</span>
+
+          <span className="text-[#c9a84c] text-xs font-bold">
+            {credits}
+          </span>
+
+          <span className="text-[#7a748f] text-xs">
+            · −2/min
+          </span>
         </div>
       </div>
- 
+
       {status === "connecting" && (
         <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
-          <div className="text-6xl mb-4">🌺</div>
-          <div className="text-white text-2xl font-semibold mb-2"
-            style={{ fontFamily: "'Cormorant Garamond', serif" }}>
+
+          <div className="text-6xl mb-4">
+            🌺
+          </div>
+
+          <div
+            className="text-white text-2xl font-semibold mb-2"
+            style={{
+              fontFamily: "'Cormorant Garamond', serif"
+            }}
+          >
             {creator.name}
           </div>
-          <div className="text-white/60 text-sm">Conectando...</div>
+
+          <div className="text-white/60 text-sm">
+            Conectando...
+          </div>
+
         </div>
       )}
- 
-      <div className="absolute z-20 rounded-2xl overflow-hidden flex items-center justify-center"
-        style={{ bottom: 140, right: 16, width: 100, height: 140, background: "#1a1826", border: "2px solid rgba(255,255,255,.2)" }}>
-        <span style={{ fontSize: 40, filter: camOff ? "grayscale(1) opacity(.3)" : "none" }}>
+
+      <div
+        className="absolute z-20 rounded-2xl overflow-hidden flex items-center justify-center"
+        style={{
+          bottom: 140,
+          right: 16,
+          width: 100,
+          height: 140,
+          background: "#1a1826",
+          border: "2px solid rgba(255,255,255,.2)"
+        }}
+      >
+        <span
+          style={{
+            fontSize: 40,
+            filter: camOff ? "grayscale(1) opacity(.3)" : "none"
+          }}
+        >
           {camOff ? "🚫" : "🤳"}
         </span>
       </div>
- 
-      <div className="absolute z-20" style={{ bottom: 120, left: 20 }}>
+
+      <div
+        className="absolute z-20"
+        style={{ bottom: 120, left: 20 }}
+      >
         <button
           onClick={() => setShowGifts(true)}
           className="flex flex-col items-center gap-1 bg-transparent border-none cursor-pointer active:scale-90 transition-transform"
         >
-          <div className="w-12 h-12 rounded-full flex items-center justify-center"
-            style={{ background: "rgba(255,255,255,.15)", backdropFilter: "blur(10px)" }}>
-            <span className="text-2xl">🎁</span>
+          <div
+            className="w-12 h-12 rounded-full flex items-center justify-center"
+            style={{
+              background: "rgba(255,255,255,.15)",
+              backdropFilter: "blur(10px)"
+            }}
+          >
+            <span className="text-2xl">
+              🎁
+            </span>
           </div>
-          <span className="text-white/60 text-[10px]">Regalo</span>
+
+          <span className="text-white/60 text-[10px]">
+            Regalo
+          </span>
         </button>
       </div>
- 
-      <div className="absolute z-20" style={{ bottom: 120, left: 80 }}>
+
+      <div
+        className="absolute z-20"
+        style={{ bottom: 120, left: 80 }}
+      >
         <button
           onClick={() => setShowChat(c => !c)}
           className="flex flex-col items-center gap-1 bg-transparent border-none cursor-pointer active:scale-90 transition-transform"
@@ -387,17 +497,28 @@ export default function VideoCall({
           <div
             className="w-12 h-12 rounded-full flex items-center justify-center"
             style={{
-              background: showChat ? "rgba(201,168,76,.35)" : "rgba(255,255,255,.15)",
+              background: showChat
+                ? "rgba(201,168,76,.35)"
+                : "rgba(255,255,255,.15)",
+
               backdropFilter: "blur(10px)",
-              border: showChat ? "1px solid rgba(201,168,76,.6)" : "none",
+
+              border: showChat
+                ? "1px solid rgba(201,168,76,.6)"
+                : "none",
             }}
           >
-            <span className="text-2xl">💬</span>
+            <span className="text-2xl">
+              💬
+            </span>
           </div>
-          <span className="text-white/60 text-[10px]">Chat</span>
+
+          <span className="text-white/60 text-[10px]">
+            Chat
+          </span>
         </button>
       </div>
- 
+
       <CallControls
         muted={muted}
         camOff={camOff}
@@ -405,7 +526,7 @@ export default function VideoCall({
         onToggleCam={() => setCamOff(c => !c)}
         onEnd={handleEnd}
       />
- 
+
       {showGifts && (
         <GiftPanel
           context="call"
@@ -415,11 +536,17 @@ export default function VideoCall({
           theme={theme}
         />
       )}
- 
-      {showChat && (
-        <MiniChat theme={theme} onClose={() => setShowChat(false)} />
-      )}
- 
+
+  {showChat && (
+    <MiniChat
+      theme={theme}
+      onClose={() => setShowChat(false)}
+      creator={creator}
+      credits={credits}
+      onCreditsUpdate={setCredits}
+  />
+)}
+
     </div>
   );
 }

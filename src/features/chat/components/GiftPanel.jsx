@@ -1,9 +1,13 @@
 import { useEffect, useRef } from "react";
 import { GIFTS } from "../../../constants/gifts";
- 
-const GiftPanel = ({ onSend, onClose }) => {
+
+const GiftPanel = ({ onSend, onClose, context = "chat" }) => {
   const scrollRef = useRef(null);
- 
+
+  const visibleGifts = context === "call"
+    ? GIFTS
+    : GIFTS.filter(g => !g.callOnly);
+
   useEffect(() => {
     let mounted = true;
     const timer = setTimeout(() => {
@@ -19,7 +23,7 @@ const GiftPanel = ({ onSend, onClose }) => {
       clearTimeout(timer);
     };
   }, []);
- 
+
   return (
     <div
       style={{
@@ -45,7 +49,7 @@ const GiftPanel = ({ onSend, onClose }) => {
           WebkitOverflowScrolling: "touch",
         }}
       >
-        {GIFTS.map((gift) => (
+        {visibleGifts.map((gift) => (
           <button
             key={gift.id}
             onClick={() => onSend?.(gift)}
@@ -74,7 +78,7 @@ const GiftPanel = ({ onSend, onClose }) => {
         ))}
         <div style={{ minWidth: "20px", height: "10px" }} />
       </div>
- 
+
       <button
         onClick={onClose}
         style={{
