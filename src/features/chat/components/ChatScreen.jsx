@@ -5,7 +5,10 @@ import GiftPanel from './GiftPanel';
 import { supabase } from '../../../services/api/supabase';
 
 const SOUNDS = {
-  basico:      new URL("../../../assets/sounds/sonidobasico2.mp3", import.meta.url).href,
+  chocolate:   new URL("../../../assets/sounds/wow.mp3", import.meta.url).href,
+  oso:         new URL("../../../assets/sounds/oso.mp3", import.meta.url).href,
+  colibri:     new URL("../../../assets/sounds/colibri.mp3", import.meta.url).href,
+  basico:      new URL("../../../assets/sounds/sonidobasico.mp3", import.meta.url).href,
   rosa:        new URL("../../../assets/sounds/rosa.mp3", import.meta.url).href,
   copa:        new URL("../../../assets/sounds/dandy.mp3", import.meta.url).href,
   diamante:    new URL("../../../assets/sounds/diamante.mp3", import.meta.url).href,
@@ -184,7 +187,7 @@ function GiftOverlay({ gift, onDone }) {
       clearTimeout(t2);
     };
 
-  }, []);
+}, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (isFullscreen) {
 
@@ -649,7 +652,7 @@ export default function ChatScreen({ girl, onBack }) {
         p_gift_name: gift.name,
       }
     );
-
+console.log("RPC send_gift →", { data, error }); // 👈
     setSendingGift(false);
 
     // backend rechazó
@@ -695,6 +698,7 @@ export default function ChatScreen({ girl, onBack }) {
           : msg
       )
     );
+    
   };
 
   if (showVC) {

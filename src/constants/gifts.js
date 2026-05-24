@@ -5,13 +5,13 @@ export const GIFTS = [
   { id: 1,  name: "Fuego",         emoji: "🔥", image: "/fuegoTenor.webp",     cost: 5,   color: "#ff4500", soundKey: "basico",       duration: 2000 },
   { id: 2,  name: "Beso",          emoji: "💋", image: "/kiss.gif",           cost: 10,    color: "#ff6b8a", soundKey: "basico",      duration: 2000 },
   { id: 4,  name: "Corazón",       emoji: "❤️", image: "/corazónTenor.gif",   cost: 12,   color: "#ff0000", soundKey: "basico",       duration: 3000 },
-  { id: 3,  name: "Chocolate",     emoji: "🍫", image: "/chocolate.gif",      cost: 15,   color: "#7c2d12", soundKey: "chocolate",     duration: 3000, callOnly: true },
+  { id: 3,  name: "Chocolate",     emoji: "🍫", image: "/chocolate.gif",      cost: 15,   color: "#7c2d12", soundKey: "chocolate",     duration: 3000 },
   { id: 5,  name: "Rosa",          emoji: "🌹", image: "/rosaTenor.webp",     cost: 25,   color: "#ff007f", soundKey: "rosa",          duration: 3000 },
 
   // --- MEDIOS / ROMÁNTICOS (50 a 250 créditos) ---
   { id: 6,  name: "Copa",          emoji: "🍷", image: "/copaTenor.webp",      cost: 50,   color: "#9b2335", soundKey: "copa",          duration: 3000 },
   { id: 7,  name: "Diamante",      emoji: "💎", image: "/diamanteTenor.webp", cost: 100,  color: "#7c3aed", soundKey: "diamante",      duration: 3000 },
-  { id: 8,  name: "Oso de Peluche", emoji: "🧸", image: "/oso.gif",           cost: 150,  color: "#b45309", soundKey: "oso",           duration: 4500 },
+  { id: 8,  name: "Oso de Peluche", emoji: "🧸", image: "/oso.gif",           cost: 150,  color: "#b45309", soundKey: "oso",           duration: 4700 },
   { id: 9,  name: "Anillo",        emoji: "💍", image: "/anilloTenor.webp",    cost: 250,  color: "#fbbf24", soundKey: "anillo",       duration: 3000 },
   { id: 10,  name: "Colibri",       emoji: "🐦", image: "/colibri.webp",      cost: 260,   color: "#ff0000", soundKey: "colibri",       duration: 3000 },
 

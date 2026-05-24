@@ -22,55 +22,87 @@ export default function JoinCreator() {
       return;
     }
     supabase.from('recruiter_tokens')
-      .select('*').eq('token', token).eq('used', false).single()
+      .select('id, token, used')
+      .eq('token', token)
+      .eq('used', false)
+      .single()
       .then(({ data }) => {
-        if (data) { saveRecruiterToken(token); setStep('valid'); }
-        else { setStep('invalid'); setTimeout(() => navigate(ROUTES.SPLASH, { replace: true }), 2000); }
+        if (!data) {
+          setStep('invalid');
+          setTimeout(() => navigate(ROUTES.SPLASH, { replace: true }), 2000);
+          return;
+        }
+        saveRecruiterToken(token);
+        setStep('valid');
       });
   }, [token, navigate]);
 
   const handleChange = (e) => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
 
   const handleSubmit = async () => {
-    if (!form.name || !form.email || !form.password) { setError('Completá todos los campos'); return; }
-    setSubmitting(true);
-    setError('');
-
-    const { data: tokenCheck } = await supabase
-      .from('recruiter_tokens')
-      .select('*').eq('token', token).eq('used', false).single();
-
-    if (!tokenCheck) {
-      setError('Este link ya fue usado o es inválido');
-      setSubmitting(false);
+    if (!form.name.trim() || !form.email.trim() || !form.password) {
+      setError('Completá todos los campos');
+      return;
+    }
+    if (form.name.trim().length < 2) {
+      setError('El nombre es muy corto');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      setError('Email inválido');
+      return;
+    }
+    if (form.password.length < 8) {
+      setError('La contraseña debe tener al menos 8 caracteres');
       return;
     }
 
-    const { data, error: authError } = await supabase.auth.signUp({
-      email: form.email,
-      password: form.password,
-      options: {
-        data: {
-          display_name: form.name,
-          role: 'creator',
+    setSubmitting(true);
+    setError('');
+
+    try {
+      const res = await fetch(
+        'https://pjjbksvqxwwibftimrwy.supabase.co/functions/v1/join-creator',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token,
+            name: form.name.trim(),
+            email: form.email.trim().toLowerCase(),
+            password: form.password,
+          }),
         }
+      );
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        setError(result.error || 'Error al crear cuenta');
+        return;
       }
-    });
-    if (authError) { setError(authError.message); setSubmitting(false); return; }
 
-    const { error: profileError } = await supabase.from('creator_profiles').insert({
-      user_id: data.user.id, bio: '', price_per_min: 10, is_verified: false, is_available: true,
-    });
-    if (profileError) { setError(profileError.message); setSubmitting(false); return; }
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+      });
 
-    await supabase.from('recruiter_tokens').update({ used: true }).eq('token', token);
+      if (signInError) {
+        setError(signInError.message);
+        return;
+      }
 
-    setUser({ id: data.user.id, name: form.name, role: ROLES.CREATOR, recruiterToken: token });
-    navigate(ROUTES.CREATOR_HOME);
+      setUser({ id: data.user.id, name: form.name.trim(), role: ROLES.CREATOR, recruiterToken: token });
+      navigate(ROUTES.CREATOR_HOME);
+    } catch {
+      setError('Error de red, intentá de nuevo');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (step === 'loading') return <Screen><p className="text-[#c9a84c]">Verificando invitación...</p></Screen>;
-  if (step === 'invalid') return <Screen><p className="text-red-400">Link inválido. Redirigiendo...</p></Screen>;
+  if (step === 'invalid') return <Screen><p className="text-red-400">Link inválido o vencido. Contactá a tu recruiter.</p></Screen>;
 
   return (
     <Screen>
@@ -85,7 +117,7 @@ export default function JoinCreator() {
             className="w-full bg-[#1a1826] border border-[rgba(196,96,122,.3)] rounded-full py-3.5 px-5 text-[#ede8ff] text-sm outline-none placeholder:text-[#7a748f] focus:border-[#c4607a]" />
           <input name="email" type="email" placeholder="Email" value={form.email} onChange={handleChange}
             className="w-full bg-[#1a1826] border border-[rgba(196,96,122,.3)] rounded-full py-3.5 px-5 text-[#ede8ff] text-sm outline-none placeholder:text-[#7a748f] focus:border-[#c4607a]" />
-          <input name="password" type="password" placeholder="Contraseña" value={form.password} onChange={handleChange}
+          <input name="password" type="password" placeholder="Contraseña (mín. 8 caracteres)" value={form.password} onChange={handleChange}
             className="w-full bg-[#1a1826] border border-[rgba(196,96,122,.3)] rounded-full py-3.5 px-5 text-[#ede8ff] text-sm outline-none placeholder:text-[#7a748f] focus:border-[#c4607a]" />
         </div>
         {error && <p className="text-red-400 text-sm text-center">{error}</p>}
