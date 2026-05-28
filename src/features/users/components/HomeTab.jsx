@@ -12,7 +12,7 @@ function CreatorCard({ g, onSelectGirl }) {
       onPointerDown={() => hasCover && setFlipped(true)}
       onPointerUp={() => setFlipped(false)}
       onPointerLeave={() => setFlipped(false)}
-      onClick={() => onSelectGirl({ id: g.id, name: g.display_name, img: g.avatar_url })}
+      onClick={() => onSelectGirl({ id: g.id, name: g.display_name, img: g.avatar_url, video_url: g.video_url })}
       className="rounded-[20px] overflow-hidden bg-[#1a1826] border border-[rgba(201,168,76,.14)] aspect-[3/4] relative cursor-pointer hover:scale-[1.02]"
       style={{ transition: 'transform 0.2s' }}
     >
@@ -50,7 +50,7 @@ export default function HomeTab({ onSelectGirl }) {
   useEffect(() => {
     supabase
       .from('users')
-      .select('id, display_name, avatar_url, cover_url')
+      .select('id, display_name, avatar_url, cover_url, video_url')
       .eq('role', 'creator')
       .not('avatar_url', 'is', null)
       .then(({ data }) => { if (data) setCreators([...data].sort(() => Math.random() - 0.5)); });

@@ -3,6 +3,7 @@ import useAppStore from '../../../app/store/useAppStore';
 import VideoCall from '../../calls/components/VideoCall';
 import GiftPanel from './GiftPanel';
 import { supabase } from '../../../services/api/supabase';
+import { StoryRing, StoryModal } from '../../creators/components/CreatorVideoStory';
 
 const SOUNDS = {
   chocolate:   new URL("../../../assets/sounds/wow.mp3", import.meta.url).href,
@@ -430,6 +431,7 @@ export default function ChatScreen({ girl, onBack }) {
   const [translateEnabled, setTranslateEnabled] = useState(false);
   const [sendingGift, setSendingGift] = useState(false);
   const [activeGift, setActiveGift] = useState(null);
+  const [showStory, setShowStory] = useState(false);
 
   const bottomRef = useRef(null);
 
@@ -743,60 +745,43 @@ console.log("RPC send_gift →", { data, error }); // 👈
         )
       }
 
+
+
       {/* HEADER */}
 
-      <div className="flex items-center gap-3 py-3.5 px-4 bg-[#111018] border-b border-[rgba(201,168,76,.14)] shrink-0">
 
-        <button
-          onClick={onBack}
-          className="text-[#ede8ff] text-2xl"
-        >
-          ←
-        </button>
+<div className="flex items-center gap-3 py-3.5 px-4 bg-[#111018] border-b border-[rgba(201,168,76,.14)] shrink-0">
 
-        <img
-          src={girl.img}
-          alt={girl.name}
-          className="w-11 h-11 rounded-full object-cover border-2 border-[#c9a84c]"
-        />
+  <button onClick={onBack} className="text-[#ede8ff] text-2xl">←</button>
 
-        <div className="flex-1">
+  <StoryRing hasVideo={!!girl?.video_url} size={44} onClick={() => girl?.video_url && setShowStory(true)}>
+    <div className="w-full h-full rounded-full overflow-hidden" style={{ border: '2px solid #c9a84c' }}>
+      <img src={girl.img} alt={girl.name} className="w-full h-full object-cover" />
+    </div>
+  </StoryRing>
 
-          <div className="font-semibold text-base text-[#ede8ff]">
-            {girl.name}
-          </div>
+  <div className="flex-1">
+    <div className="font-semibold text-base text-[#ede8ff]">{girl.name}</div>
+    <button
+      onClick={() => setTranslateEnabled(v => !v)}
+      className={`text-[10px] px-2 py-0.5 rounded-full border ${
+        translateEnabled ? 'bg-[#c9a84c] text-black border-[#c9a84c]' : 'text-[#7a748f] border-[#7a748f]'
+      }`}
+    >
+      {translateEnabled ? 'Traducción ON' : 'Traducción OFF'}
+    </button>
+  </div>
 
-          <button
-            onClick={() => {
-              setTranslateEnabled(v => !v);
-            }}
+  <button
+    onClick={() => setShowVC(true)}
+    className="bg-gradient-to-br from-[#c9a84c] to-[#f0d882] rounded-full py-2 px-4 text-[#09080f] text-sm font-semibold"
+  >
+    📹
+  </button>
 
-            className={`text-[10px] px-2 py-0.5 rounded-full border ${
-              translateEnabled
-                ? 'bg-[#c9a84c] text-black border-[#c9a84c]'
-                : 'text-[#7a748f] border-[#7a748f]'
-            }`}
-          >
-            {
-              translateEnabled
-                ? 'Traducción ON'
-                : 'Traducción OFF'
-            }
-          </button>
+</div>
 
-        </div>
-
-        <button
-          onClick={() => {
-            setShowVC(true);
-          }}
-
-          className="bg-gradient-to-br from-[#c9a84c] to-[#f0d882] rounded-full py-2 px-4 text-[#09080f] text-sm font-semibold"
-        >
-          📹
-        </button>
-
-      </div>
+<StoryModal videoUrl={girl?.video_url} isOpen={showStory} onClose={() => setShowStory(false)} />
 
       {/* MENSAJES */}
 

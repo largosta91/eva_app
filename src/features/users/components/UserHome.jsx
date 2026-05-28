@@ -8,6 +8,7 @@ import PaywallGate from '../../wallet/components/PaywallGate';
 import HomeTab from './HomeTab';
 import ProfileTab from './ProfileTab';
 import { supabase } from '../../../services/api/supabase';
+import { StoryRing, StoryModal } from '../../creators/components/CreatorVideoStory';
 
 // Eliminamos CHAT_HISTORY fijo para usar datos reales de la DB
 
@@ -15,6 +16,7 @@ function ChatsTab({ onSelectGirl }) {
   const { user } = useAppStore();
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
+const [storyUrl, setStoryUrl] = useState(null); // ← agregá esta
 
   const fetchConversations = async () => {
     if (!user?.id) return;
@@ -31,29 +33,31 @@ function ChatsTab({ onSelectGirl }) {
     // Lógica para agrupar por contacto y quedarnos solo con el último mensaje
     const chatsMap = {};
     data.forEach(m => {
-      const contactId = m.sender_id === user.id ? m.receiver_id : m.sender_id;
-      if (!chatsMap[contactId]) {
-        chatsMap[contactId] = {
-          id: contactId,
-          preview: m.content,
-          unread: !m.is_read && m.receiver_id === user.id,
-          time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-      }
-    });
+    const contactId = m.sender_id === user.id ? m.receiver_id : m.sender_id;
+    if (!chatsMap[contactId]) {
+      chatsMap[contactId] = {
+      id: contactId,
+      preview: m.content,
+      unread: !m.is_read && m.receiver_id === user.id,
+      time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      video_url: null // ← se rellena después con el query de profiles
+    };
+  }
+});
 
     // Buscamos los nombres/fotos de esos contactos
     const contactIds = Object.keys(chatsMap);
     if (contactIds.length > 0) {
       const { data: profiles } = await supabase
         .from('users')
-        .select('id, display_name, avatar_url')
+        .select('id, display_name, avatar_url, video_url')
         .in('id', contactIds);
 
-      profiles?.forEach(p => {
+        profiles?.forEach(p => {
         chatsMap[p.id].name = p.display_name;
         chatsMap[p.id].img = p.avatar_url;
-      });
+        chatsMap[p.id].video_url = p.video_url; // ← falta esta línea
+        });
     }
 
     setConversations(Object.values(chatsMap));
@@ -78,6 +82,7 @@ function ChatsTab({ onSelectGirl }) {
 
   return (
     <div className="flex flex-col">
+      <StoryModal videoUrl={storyUrl} isOpen={!!storyUrl} onClose={() => setStoryUrl(null)} />
       <div className="px-5 py-2">
         {conversations.length === 0 ? (
           <div className="py-20 text-center text-[#7a748f]">
@@ -91,13 +96,24 @@ function ChatsTab({ onSelectGirl }) {
               onClick={() => onSelectGirl(u)}
               className="flex items-center gap-3.5 py-3.5 border-b border-[rgba(201,168,76,.08)] cursor-pointer active:bg-[rgba(201,168,76,.04)]"
             >
-              <div className="w-12 h-12 rounded-full bg-[#1a1826] overflow-hidden shrink-0 border border-[rgba(201,168,76,.14)]">
-                {u.img ? (
-                  <img src={u.img} alt={u.name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-2xl">👩</div>
-                )}
-              </div>
+              <StoryRing
+                hasVideo={!!u.video_url}
+                size={48}
+                onClick={(e) => {
+                  if (u.video_url) {
+                    e.stopPropagation();
+                    setStoryUrl(u.video_url);
+                  }
+                }}
+              >
+                <div className="w-full h-full rounded-full bg-[#1a1826] overflow-hidden">
+                  {u.img
+                    ? <img src={u.img} alt={u.name} className="w-full h-full object-cover" />
+                    : <div className="w-full h-full flex items-center justify-center text-2xl">👩</div>
+                  }
+                </div>
+              </StoryRing>
+
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between mb-1">
                   <span className="font-medium text-[15px] text-[#ede8ff]">{u.name}</span>

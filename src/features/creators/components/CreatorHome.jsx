@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../../constants/routes';
 import useAppStore from '../../../app/store/useAppStore';
@@ -17,24 +17,90 @@ const DAILY_PHRASES = [
   { text: "Cada 'hola' tuyo puede ser el mejor momento del día de alguien.", author: "— Eva" },
 ];
 
-// ─── DailyCard ───────────────────────────────────────────────────────────────
+// ─── DailyCard RENDERIZA SEGUN LA FECHA  UNA FRASE MOTIVACIONAL ─────────────────────────────────────────────────────────────────
 function DailyCard() {
-  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
-  const phrase = DAILY_PHRASES[dayOfYear % DAILY_PHRASES.length];
+  const phrase = useMemo(() => {
+    const now = new Date();
+    const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+    return DAILY_PHRASES[dayOfYear % DAILY_PHRASES.length];
+  }, []) ;
+
   return (
-    <div style={{ borderRadius: 24, overflow: 'hidden', position: 'relative', background: 'linear-gradient(145deg, #1a0a0f 0%, #2d0f1e 40%, #1a0a0f 100%)' }}>
+    <div
+      style={{
+        borderRadius: 24,
+        overflow: 'hidden',
+        position: 'relative',
+        background: 'linear-gradient(145deg, #1a0a0f 0%, #2d0f1e 40%, #1a0a0f 100%)'
+      }}
+    >
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: '-30%', left: '-15%', width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(196,96,122,0.35) 0%, transparent 70%)' }} />
         <div style={{ position: 'absolute', bottom: '-10%', right: '-5%', width: 140, height: 140, borderRadius: '50%', background: 'radial-gradient(circle, rgba(232,160,176,0.2) 0%, transparent 70%)' }} />
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: 'linear-gradient(90deg, transparent, rgba(196,96,122,0.5), transparent)' }} />
       </div>
+
       <div style={{ position: 'relative', zIndex: 1, padding: '24px 22px 20px' }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(196,96,122,0.18)', border: '1px solid rgba(196,96,122,0.3)', borderRadius: 99, padding: '3px 10px', marginBottom: 16 }}>
           <span style={{ fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#e8a0b0', fontWeight: 600 }}>✦ Frase del día</span>
         </div>
-        <p style={{ fontFamily: 'Georgia, serif', fontSize: 17, lineHeight: 1.55, color: '#f5e8ed', fontStyle: 'italic', marginBottom: 8, fontWeight: 400 }}>"{phrase.text}"</p>
+
+        <p style={{ fontFamily: 'Georgia, serif', fontSize: 17, lineHeight: 1.55, color: '#f5e8ed', fontStyle: 'italic', marginBottom: 8, fontWeight: 400 }}>
+          "{phrase.text}"
+        </p>
         <p style={{ fontSize: 11, color: 'rgba(232,160,176,0.6)', marginBottom: 24, letterSpacing: '0.04em' }}>{phrase.author}</p>
         <div style={{ height: 1, background: 'rgba(196,96,122,0.2)' }} />
+      </div>
+    </div>
+  );
+}
+
+// ─── IncomingCallAlertVisual ALERTA DE LLAMADA PARA RECIVIRLA O RECHAZARLA ────────────────────────────────────────────────
+function IncomingCallAlertVisual() {
+  const [hasRequest, setHasRequest] = useState(true);
+
+  if (!hasRequest) return null;
+
+  return (
+    <div 
+      style={{
+        background: 'linear-gradient(135deg, #2d0f1e 0%, #1a0a0f 100%)',
+        border: '2px solid #c4607a',
+        borderRadius: 20,
+        padding: '16px 20px',
+        marginBottom: 20,
+        boxShadow: '0 0 20px rgba(196,96,122,0.15)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        animation: 'pulse 2s infinite'
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ fontSize: 24, animation: 'bounce 1s infinite' }}>📞</div>
+        <div>
+          <h4 style={{ margin: 0, color: '#f5e8ed', fontSize: 15 }}>
+            ¡Solicitud de llamada directa!
+          </h4>
+          <p style={{ margin: '4px 0 0 0', fontSize: 12, color: 'rgba(232,160,176,0.8)' }}>
+            <strong style={{ color: '#e8a0b0' }}>@FanAnonimo</strong> quiere llamarte • <span style={{ color: '#22c55e', fontWeight: 600 }}>10 min ($50.00)</span>
+          </p>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button 
+          onClick={() => setHasRequest(false)}
+          style={{ background: 'rgba(239,68,68,0.2)', border: '1px solid #ef4444', color: '#ef4444', padding: '6px 12px', borderRadius: 12, fontSize: 12, cursor: 'pointer' }}
+        >
+          Rechazar
+        </button>
+        <button 
+          onClick={() => alert("Simulación: Iniciando sala de video segura...")}
+          style={{ background: '#22c55e', border: 'none', color: '#fff', padding: '6px 16px', borderRadius: 12, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+        >
+          Atender
+        </button>
       </div>
     </div>
   );
@@ -43,36 +109,69 @@ function DailyCard() {
 // ─── Hook conversaciones ─────────────────────────────────────────────────────
 function useConversations(creatorId) {
   const [conversations, setConversations] = useState([]);
+
   const load = useCallback(async () => {
     if (!creatorId) return;
+
     const { data, error } = await supabase
       .from('messages')
       .select('sender_id, receiver_id, content, created_at')
       .or(`sender_id.eq.${creatorId},receiver_id.eq.${creatorId}`)
       .order('created_at', { ascending: false });
+
     if (!data || error) return;
+
     const seen = new Map();
+
     for (const m of data) {
       const otherId = m.sender_id === creatorId ? m.receiver_id : m.sender_id;
       if (otherId === creatorId) continue;
       if (!seen.has(otherId)) seen.set(otherId, m);
     }
+
     const ids = [...seen.keys()];
-    if (ids.length === 0) { setConversations([]); return; }
-    const { data: users } = await supabase.from('users').select('id, display_name, avatar_url').in('id', ids);
+    if (ids.length === 0) {
+      setConversations([]);
+      return;
+    }
+
+    const { data: users } = await supabase
+      .from('users')
+      .select('id, display_name, avatar_url')
+      .in('id', ids);
+
     const userMap = Object.fromEntries((users || []).map(u => [u.id, { name: u.display_name, avatar: u.avatar_url }]));
-    setConversations(ids.map(id => ({ id, name: userMap[id]?.name ?? 'Usuario', avatar: userMap[id]?.avatar || null, preview: seen.get(id).content })));
+
+    setConversations(
+      ids.map(id => ({
+        id,
+        name: userMap[id]?.name ?? 'Usuario',
+        avatar: userMap[id]?.avatar || null,
+        preview: seen.get(id).content
+      }))
+    );
   }, [creatorId]);
-  useEffect(() => { load(); const interval = setInterval(load, 5000); return () => clearInterval(interval); }, [load]);
+
+  useEffect(() => {
+    load();
+    const interval = setInterval(load, 5000);
+    return () => clearInterval(interval);
+  }, [load]);
+
   return conversations;
 }
 
-// ─── AvatarUpload ────────────────────────────────────────────────────────────
+// ─── AvatarUpload  FOTO DE PERFIL MAS PRIMERA FOTO DE LA CARD ────────────────────────────────────────────────────────────
 function AvatarUpload({ size = 'sm' }) {
   const fileRef = useRef(null);
+  const videoRef = useRef(null);
   const { user, setUser } = useAppStore();
   const isLarge = size === 'lg';
   const [uploading, setUploading] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [showVideo, setShowVideo] = useState(false);
+
+  // ─── Subir foto ───────────────────────────────────────────────────────────
   const handleFile = async (e) => {
     const f = e.target.files?.[0];
     if (!f || !user?.id) return;
@@ -86,62 +185,218 @@ function AvatarUpload({ size = 'sm' }) {
       const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
       await supabase.from('users').update({ avatar_url: publicUrl }).eq('id', user.id);
       setUser({ ...user, avatar_url: publicUrl });
-    } catch (err) { console.error('Upload error:', err); }
-    finally { setUploading(false); }
+    } catch (err) {
+      console.error('Upload error:', err);
+    } finally {
+      setUploading(false);
+    }
   };
+
+  // ─── Subir video ──────────────────────────────────────────────────────────
+  const handleVideo = async (e) => {
+    const f = e.target.files?.[0];
+    if (!f || !user?.id) return;
+    if (f.size > 30 * 1024 * 1024) {
+      alert('El video es muy pesado. Máximo 30MB.');
+      return;
+    }
+    setUploadingVideo(true);
+    try {
+      const ext = f.name.split('.').pop();
+      const path = `${user.id}/presentation.${ext}`;
+      const { error } = await supabase.storage.from('avatars').upload(path, f, { upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+      const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
+      await supabase.from('users').update({ video_url: publicUrl }).eq('id', user.id);
+      setUser({ ...user, video_url: publicUrl });
+    } catch (err) {
+      console.error('Video upload error:', err);
+    } finally {
+      setUploadingVideo(false);
+    }
+  };
+
   const avatar = user?.avatar_url || null;
+  const hasVideo = !!user?.video_url;
+
   return (
-    <div className="relative" style={{ width: isLarge ? 80 : 44, height: isLarge ? 80 : 44 }}>
-      <div className="w-full h-full rounded-full flex items-center justify-center overflow-hidden"
-        style={{ background: avatar ? 'transparent' : '#f8dde4', border: isLarge ? '3px solid #c4607a' : 'none', boxShadow: isLarge ? '0 0 0 6px rgba(196,96,122,.2)' : 'none', fontSize: isLarge ? 36 : 22 }}>
-        {uploading ? <span className="text-lg animate-pulse">⏳</span> : avatar ? <img src={avatar} alt="perfil" className="w-full h-full object-cover rounded-full" /> : '🌺'}
+    <>
+      {/* ─── Modal video fullscreen ─────────────────────────────────────── */}
+      {showVideo && (
+        <div
+          onClick={() => setShowVideo(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: 'rgba(0,0,0,0.92)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}
+        >
+          <video
+            src={user.video_url}
+            autoPlay
+            playsInline
+            style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: 16 }}
+            onEnded={() => setShowVideo(false)}
+            onClick={e => e.stopPropagation()}
+          />
+          <button
+            onClick={() => setShowVideo(false)}
+            style={{
+              position: 'absolute', top: 20, right: 20,
+              background: 'rgba(255,255,255,0.15)', border: 'none',
+              color: 'white', borderRadius: '50%', width: 36, height: 36,
+              fontSize: 18, cursor: 'pointer'
+            }}
+          >✕</button>
+        </div>
+      )}
+
+      {/* ─── Avatar con anillo ──────────────────────────────────────────── */}
+      <div className="relative" style={{ width: isLarge ? 80 : 44, height: isLarge ? 80 : 44 }}>
+
+        {/* Anillo animado si tiene video */}
+        <div
+          onClick={() => hasVideo && setShowVideo(true)}
+          style={{
+            width: '100%', height: '100%', borderRadius: '50%',
+            padding: hasVideo ? 2 : 0,
+            background: hasVideo
+              ? 'linear-gradient(135deg, #c4607a, #833AB4, #FCAF45)'
+              : 'transparent',
+            ...(hasVideo && { backgroundSize: '200% 200%' }),
+            animation: hasVideo ? 'storyRingSpin 3s linear infinite' : 'none',
+            cursor: hasVideo ? 'pointer' : 'default',
+          }}
+        >
+          <div
+            className="w-full h-full rounded-full flex items-center justify-center overflow-hidden"
+            style={{
+              background: avatar ? 'transparent' : '#f8dde4',
+              border: hasVideo ? '2px solid #fff9f5' : isLarge ? '3px solid #c4607a' : 'none',
+              boxShadow: isLarge && !hasVideo ? '0 0 0 6px rgba(196,96,122,.2)' : 'none',
+              fontSize: isLarge ? 36 : 22
+            }}
+          >
+            {uploading
+              ? <span className="text-lg animate-pulse">⏳</span>
+              : avatar
+                ? <img src={avatar} alt="perfil" className="w-full h-full object-cover rounded-full" />
+                : '🌺'
+            }
+          </div>
+        </div>
+
+        {/* Botón foto 📷 */}
+        <button
+          onClick={() => fileRef.current?.click()}
+          className="absolute flex items-center justify-center rounded-full border-none cursor-pointer active:scale-90 transition-transform"
+          style={{
+            bottom: 0, right: 0,
+            width: isLarge ? 26 : 18,
+            height: isLarge ? 26 : 18,
+            fontSize: isLarge ? 13 : 9,
+            background: 'linear-gradient(135deg,#f472b6,#7c3aed)',
+            border: '2px solid #fdf6f0',
+            zIndex: 2
+          }}
+        >
+          📷
+        </button>
+
+        {/* Botón video 🎥 solo en tamaño grande (perfil) */}
+        {isLarge && (
+          <button
+            onClick={() => videoRef.current?.click()}
+            className="absolute flex items-center justify-center rounded-full border-none cursor-pointer active:scale-90 transition-transform"
+            style={{
+              bottom: 0, left: 0,
+              width: 26, height: 26,
+              fontSize: 13,
+              background: uploadingVideo
+                ? 'rgba(139,58,156,0.5)'
+                : 'linear-gradient(135deg,#833AB4,#c4607a)',
+              border: '2px solid #fdf6f0',
+              zIndex: 2
+            }}
+          >
+            {uploadingVideo ? '⏳' : '🎥'}
+          </button>
+        )}
+
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+        <input ref={videoRef} type="file" accept="video/*" className="hidden" onChange={handleVideo} />
       </div>
-      <button onClick={() => fileRef.current?.click()}
-        className="absolute flex items-center justify-center rounded-full border-none cursor-pointer active:scale-90 transition-transform"
-        style={{ bottom: 0, right: 0, width: isLarge ? 26 : 18, height: isLarge ? 26 : 18, fontSize: isLarge ? 13 : 9, background: 'linear-gradient(135deg,#f472b6,#7c3aed)', border: '2px solid #fdf6f0' }}>
-        📷
-      </button>
-      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
-    </div>
+
+      <style>{`
+        @keyframes storyRingSpin {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+      `}</style>
+    </>
   );
 }
 
-// ─── CoverUpload ────────────────────────────────────────────────────────────
+// ─── CoverUpload SEGUNDA FOTO DE LA CARD ────────────────────────────────────────────────────────────
 function CoverUpload() {
   const fileRef = useRef(null);
   const { user, setUser } = useAppStore();
   const [uploading, setUploading] = useState(false);
+
   const handleFile = async (e) => {
     const f = e.target.files?.[0];
     if (!f || !user?.id) return;
+
     setUploading(true);
     try {
       const ext = f.name.split('.').pop();
       const path = `${user.id}/cover.${ext}`;
       const { error: uploadError } = await supabase.storage.from('avatars').upload(path, f, { upsert: true });
       if (uploadError) throw uploadError;
+
       const { data } = supabase.storage.from('avatars').getPublicUrl(path);
       const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
+
       await supabase.from('users').update({ cover_url: publicUrl }).eq('id', user.id);
       setUser({ ...user, cover_url: publicUrl });
-    } catch (err) { console.error('Cover upload error:', err); }
-    finally { setUploading(false); }
+    } catch (err) {
+      console.error('Cover upload error:', err);
+    } finally {
+      setUploading(false);
+    }
   };
+
   const cover = user?.cover_url || null;
+
   return (
-    <div onClick={() => fileRef.current?.click()}
+    <div
+      onClick={() => fileRef.current?.click()}
       className="w-full rounded-2xl overflow-hidden cursor-pointer border-2 border-dashed border-[rgba(196,96,122,.3)] flex items-center justify-center"
-      style={{ height: 120, background: cover ? 'transparent' : 'rgba(196,96,122,.05)', position: 'relative' }}>
-      {uploading ? <span className="text-2xl animate-pulse">⏳</span>
-        : cover ? (<><img src={cover} alt="cover" className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black/30 flex items-center justify-center"><span className="text-white text-sm font-medium">📷 Cambiar foto</span></div></>)
-        : (<div className="flex flex-col items-center gap-1 text-[#9a7a84]"><span className="text-2xl">📷</span><span className="text-xs">Subir segunda foto</span></div>)
-      }
+      style={{ height: 120, background: cover ? 'transparent' : 'rgba(196,96,122,.05)', position: 'relative' }}
+    >
+      {uploading ? (
+        <span className="text-2xl animate-pulse">⏳</span>
+      ) : cover ? (
+        <>
+          <img src={cover} alt="cover" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+            <span className="text-white text-sm font-medium">📷 Cambiar foto</span>
+          </div>
+        </>
+      ) : (
+        <div className="flex flex-col items-center gap-1 text-[#9a7a84]">
+          <span className="text-2xl">📷</span>
+          <span className="text-xs">Subir segunda foto</span>
+        </div>
+      )}
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
     </div>
   );
 }
 
-// ─── Pantalla de verificación bloqueante ─────────────────────────────────────
+// ─── PANTALLA DE VERIFICACIÓN DE IDENTIDAD ─────────────────────────────────────
 function VerificationGate({ status, onUploaded }) {
   return (
     <div className="w-full h-screen bg-[#fdf6f0] flex flex-col items-center justify-center p-6 gap-6">
@@ -150,10 +405,24 @@ function VerificationGate({ status, onUploaded }) {
         <h1 className="font-serif text-2xl font-semibold text-[#c4607a] mt-3">Verificá tu identidad</h1>
         <p className="text-sm text-[#9a7a84] mt-1">Para empezar a usar Eva necesitamos confirmar que sos vos.</p>
       </div>
+
       {status === 'none' && <IDUpload theme="light" onDone={onUploaded} />}
+
       {(status === 'pending' || status === 'rejected') && (
         <VerificationStatus theme="light" onRetry={onUploaded} />
       )}
+    </div>
+  );
+}
+
+// ─── Loading simple ──────────────────────────────────────────────────────────
+function VerificationLoading() {
+  return (
+    <div className="w-full h-screen bg-[#fdf6f0] flex items-center justify-center">
+      <div className="text-center">
+        <div className="text-4xl mb-3">🔐</div>
+        <div className="font-serif text-xl text-[#c4607a]">Cargando verificación...</div>
+      </div>
     </div>
   );
 }
@@ -164,45 +433,101 @@ export default function CreatorHome() {
   const { user, logout } = useAppStore();
   const [tab, setTab] = useState('home');
   const [selectedUser, setSelectedUser] = useState(null);
-  const [verifStatus, setVerifStatus] = useState(user?.verification_status ?? 'none');
 
-  // Bloquear si no está aprobada
+  const [verifStatus, setVerifStatus] = useState(user?.verification_status ?? 'none');
+  const [verifLoading, setVerifLoading] = useState(true);
+
+  const syncVerificationStatus = useCallback(async () => {
+    if (!user?.id) {
+      setVerifStatus('none');
+      setVerifLoading(false);
+      return;
+    }
+
+    setVerifLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('verification_status')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      setVerifStatus(data?.verification_status ?? 'none');
+    } catch (err) {
+      console.error('Error leyendo verification_status:', err);
+      setVerifStatus(user?.verification_status ?? 'none');
+    } finally {
+      setVerifLoading(false);
+    }
+  }, [user?.id, user?.verification_status]);
+
+  useEffect(() => {
+    setVerifStatus(user?.verification_status ?? 'none');
+    syncVerificationStatus();
+  }, [user?.id, user?.verification_status, syncVerificationStatus]);
+
+  const handleUploaded = useCallback(async () => {
+    await syncVerificationStatus();
+  }, [syncVerificationStatus]);
+
   const isBlocked = verifStatus !== 'approved';
 
-  if (selectedUser) return <CreatorChatScreen user={selectedUser} onBack={() => setSelectedUser(null)} />;
+  if (verifLoading) return <VerificationLoading />;
 
-  if (isBlocked) return (
-    <VerificationGate
-      status={verifStatus}
-      onUploaded={() => setVerifStatus('pending')}
-    />
-  );
+  if (isBlocked) {
+    return (
+      <VerificationGate
+        status={verifStatus}
+        onUploaded={handleUploaded}
+      />
+    );
+  }
+
+  if (selectedUser) {
+    return <CreatorChatScreen user={selectedUser} onBack={() => setSelectedUser(null)} />;
+  }
 
   return (
     <div className="w-full h-screen bg-[#fdf6f0] text-[#2a1a20] flex flex-col overflow-hidden">
-      <div className="grid grid-cols-3 items-center py-3.5 px-5 bg-[#fff9f5] border-b border-[rgba(196,96,122,.15)] shrink-0">
+ <div
+  className="grid grid-cols-3 items-center py-3.5 px-5 border-b border-[rgba(196,96,122,.15)] shrink-0"
+  style={{ background: 'linear-gradient(135deg, #833AB4, #C13584, #E1306C, #F77737, #FCAF45)' }}
+>
         <div className="w-9 h-9 rounded-full p-[1.5px] bg-gradient-to-br from-[#c4607a] to-[#e8a0b0] shadow-sm">
           <div className="w-full h-full rounded-full p-[1.5px] bg-[#fff9f5] overflow-hidden">
-            <div className="w-full h-full rounded-full" style={{ backgroundImage: 'url(/logo.png)', backgroundSize: 'cover', backgroundPosition: 'center 25%' }} />
+            <div
+              className="w-full h-full rounded-full"
+              style={{ backgroundImage: 'url(/logo.png)', backgroundSize: 'cover', backgroundPosition: 'center 25%' }}
+            />
           </div>
         </div>
         <div className="flex justify-center">
-          <span className="font-serif text-2xl font-semibold bg-gradient-to-r from-[#c4607a] to-[#e8a0b0] bg-clip-text text-transparent">Eva</span>
+       <span className="font-serif text-2xl font-semibold text-white">Eva</span>
         </div>
         <div className="flex justify-end"><div className="w-9 h-9" /></div>
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {tab === 'home'    && <FHome onSelectUser={setSelectedUser} />}
-        {tab === 'chats'   && <FChats onSelectUser={setSelectedUser} />}
-        {tab === 'earn'    && <FEarn />}
+        {tab === 'home' && <FHome onSelectUser={setSelectedUser} />}
+        {tab === 'chats' && <FChats onSelectUser={setSelectedUser} />}
+        {tab === 'earn' && <FEarn />}
         {tab === 'profile' && <FProfile onLogout={() => { logout(); navigate(ROUTES.SPLASH); }} />}
       </div>
 
       <div className="flex bg-[#fff9f5] border-t border-[rgba(196,96,122,.15)] pt-2.5 pb-5 shrink-0">
-        {[['home','🏠','Inicio'],['chats','💬','Chats'],['earn','💰','Ganancias'],['profile','📷','Perfil']].map(([key,icon,label]) => (
-          <button key={key} onClick={() => setTab(key)}
-            className={`flex-1 flex flex-col items-center gap-1 text-[10px] font-medium uppercase tracking-wider bg-transparent border-none cursor-pointer transition-colors ${tab === key ? 'text-[#c4607a]' : 'text-[#9a7a84]'}`}>
+        {[
+          ['home', '🏠', 'Inicio'],
+          ['chats', '💬', 'Chats'],
+          ['earn', '💰', 'Ganancias'],
+          ['profile', '📷', 'Perfil']
+        ].map(([key, icon, label]) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className={`flex-1 flex flex-col items-center gap-1 text-[10px] font-medium uppercase tracking-wider bg-transparent border-none cursor-pointer transition-colors ${tab === key ? 'text-[#c4607a]' : 'text-[#9a7a84]'}`}
+          >
             <span className="text-2xl">{icon}</span>{label}
           </button>
         ))}
@@ -211,7 +536,7 @@ export default function CreatorHome() {
   );
 }
 
-// ─── FHome ───────────────────────────────────────────────────────────────────
+// ─── FHome  COMO SE VE EL BOTON Y PANTALLA HOME───────────────────────────────────────────────────────────────────
 function FHome({ onSelectUser }) {
   const { user } = useAppStore();
   const conversations = useConversations(user?.id);
@@ -220,43 +545,71 @@ function FHome({ onSelectUser }) {
 
   const loadStats = useCallback(async () => {
     if (!user) return;
-    const today = new Date(); today.setHours(0, 0, 0, 0);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     try {
-      const { data: gifts, error } = await supabase.from('gifts').select('value').eq('creator_id', user.id).gte('created_at', today.toISOString());
-      if (!error && gifts) setDailyEarnings(gifts.reduce((acc, g) => acc + (parseFloat(g.value) || 0), 0).toFixed(2));
-    } catch (err) { console.error('Error en loadStats:', err); }
+      const { data: gifts, error } = await supabase
+        .from('gifts')
+        .select('value')
+        .eq('creator_id', user.id)
+        .gte('created_at', today.toISOString());
+
+      if (!error && gifts) {
+        setDailyEarnings(gifts.reduce((acc, g) => acc + (parseFloat(g.value) || 0), 0).toFixed(2));
+      }
+    } catch (err) {
+      console.error('Error en loadStats:', err);
+    }
+
     setChatCount(conversations.length);
   }, [user, conversations.length]);
 
-  useEffect(() => { loadStats(); const interval = setInterval(loadStats, 30000); return () => clearInterval(interval); }, [loadStats]);
+  useEffect(() => {
+    loadStats();
+    const interval = setInterval(loadStats, 30000);
+    return () => clearInterval(interval);
+  }, [loadStats]);
 
   return (
     <div className="flex flex-col pb-4 h-full bg-[#fdf6f0]">
-      <div className="bg-[#fff9f5] border-b border-[rgba(196,96,122,.15)]">
-        <div className="flex items-center justify-between px-5 pt-5 pb-3">
-          <div>
-            <div className="font-serif text-2xl font-semibold text-[#2a1a20]">Hola 🎀</div>
-            <div className="text-sm text-[#9a7a84] mt-0.5">Bienvenida de nuevo</div>
-          </div>
-          <AvatarUpload size="sm" />
-        </div>
-        <div className="flex gap-3 px-4 py-3">
-          {[{ label: 'Hoy', value: `$${dailyEarnings}` }, { label: 'Chats', value: chatCount }, { label: 'Rating', value: '4.9' }].map((item) => (
-            <div key={item.label} className="flex-1 bg-white/50 backdrop-blur-sm border border-[rgba(196,96,122,.1)] p-3 rounded-2xl text-center shadow-sm">
-              <div className="text-[10px] text-[#9a7a84] uppercase font-bold mb-1 tracking-wider">{item.label}</div>
-              <div className="font-serif text-xl font-bold text-[#c4607a]">{item.value}</div>
-            </div>
-          ))}
-        </div>
+        <div className="bg-[#fff9f5] border-b border-[rgba(196,96,122,.15)]">
+  <div className="flex items-center justify-between px-5 pt-5 pb-3">
+    <div>
+      <div className="font-serif text-2xl font-semibold text-[#2a1a20]">Hola 🎀</div>
+      <div className="text-sm text-[#9a7a84] mt-0.5">Bienvenida de nuevo</div>
+    </div>
+    <AvatarUpload size="sm" />
+  </div>
+
+  <div className="flex gap-3 px-4 py-3">
+    {[
+      { label: 'Hoy', value: `$${dailyEarnings}` },
+      { label: 'Chats', value: chatCount },
+      { label: 'Rating', value: '4.9' }
+    ].map((item) => (
+      <div key={item.label} className="flex-1 bg-white/50 backdrop-blur-sm border border-[rgba(196,96,122,.1)] p-3 rounded-2xl text-center shadow-sm">
+        <div className="text-[10px] text-[#9a7a84] uppercase font-bold mb-1 tracking-wider">{item.label}</div>
+        <div className="font-serif text-xl font-bold text-[#c4607a]">{item.value}</div>
       </div>
-      <div className="px-5 pt-4 flex flex-col gap-3">
+    ))}
+  </div>
+</div>   
+
+
+        <div className="px-5 pt-4 flex flex-col gap-3">
         <DailyCard />
         <div className="text-[11px] font-bold uppercase tracking-[1.5px] text-[#9a7a84] mb-1 mt-3">Solicitudes nuevas</div>
+
         {conversations.length === 0
           ? <div className="text-center text-[#9a7a84] py-10 bg-white/30 rounded-3xl border border-dashed border-pink-200 text-sm italic">No hay mensajes aún</div>
           : conversations.map(u => (
-            <div key={u.id} onClick={() => onSelectUser(u)}
-              className="flex items-center gap-3.5 bg-[#fff9f5] border border-[rgba(196,96,122,.15)] rounded-2xl p-4 cursor-pointer active:scale-[0.98] transition-transform">
+            <div
+              key={u.id}
+              onClick={() => onSelectUser(u)}
+              className="flex items-center gap-3.5 bg-[#fff9f5] border border-[rgba(196,96,122,.15)] rounded-2xl p-4 cursor-pointer active:scale-[0.98] transition-transform"
+            >
               <div className="w-12 h-12 rounded-full bg-[#f5ece6] text-2xl flex items-center justify-center shrink-0 shadow-inner overflow-hidden">
                 {u.avatar ? <img src={u.avatar} alt={u.name} className="w-full h-full object-cover" /> : '🎩'}
               </div>
@@ -273,16 +626,21 @@ function FHome({ onSelectUser }) {
   );
 }
 
-// ─── FChats ──────────────────────────────────────────────────────────────────
+// ─── FChats  COMO SE VE EL BOTON Y PANTALLA DE CHATS──────────────────────────────────────────────────────────────────
 function FChats({ onSelectUser }) {
   const { user } = useAppStore();
   const conversations = useConversations(user?.id);
+
   return (
     <div className="px-5 py-2">
       {conversations.length === 0
         ? <div className="text-center text-[#9a7a84] py-10 text-sm">No hay chats aún</div>
         : conversations.map(u => (
-          <div key={u.id} onClick={() => onSelectUser(u)} className="flex items-center gap-3.5 py-3.5 border-b border-[rgba(196,96,122,.15)] cursor-pointer">
+          <div
+            key={u.id}
+            onClick={() => onSelectUser(u)}
+            className="flex items-center gap-3.5 py-3.5 border-b border-[rgba(196,96,122,.15)] cursor-pointer"
+          >
             <div className="w-12 h-12 rounded-full bg-[#f5ece6] text-2xl flex items-center justify-center shrink-0 overflow-hidden">
               {u.avatar ? <img src={u.avatar} alt={u.name} className="w-full h-full object-cover" /> : '🎩'}
             </div>
@@ -297,32 +655,150 @@ function FChats({ onSelectUser }) {
   );
 }
 
-// ─── FEarn ───────────────────────────────────────────────────────────────────
+
+// ─── FEarn  COMO SE VE EL BOTON Y PANTALLA DE GANANCIAS───────────────────────────────────────────────────────────────────
 function FEarn() {
-  const stats = { balance: 218.50, chats: 47, callsHours: 12, tips: 38, total: 487.20 };
-  const rows = [['Chats completados', stats.chats], ['Videollamadas', `${stats.callsHours} hs`], ['Propinas recibidas', `$${stats.tips}`], ['Total del mes', `$${stats.total}`]];
+  const { user } = useAppStore();
+
+  const [stats, setStats] = useState({
+    balance: 0,
+    gifts: 0,
+    conversations: 0,
+    admirers: 0
+  });
+
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadStats();
+  }, [user?.id]);
+
+  async function loadStats() {
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+
+      // ─── BALANCE ─────────────────────────────
+      const { data: balanceData, error: balanceError } = await supabase
+        .from('creator_balances')
+        .select('pending_balance')
+        .eq('creator_id', user.id)
+        .maybeSingle();
+
+      if (balanceError) throw balanceError;
+
+      // ─── REGALOS RECIBIDOS ──────────────────
+      const { data: transactions, error: transactionsError } = await supabase
+        .from('transactions')
+        .select('type')
+        .eq('creator_id', user.id);
+
+      if (transactionsError) throw transactionsError;
+
+      const totalGifts =
+        transactions?.filter(t => t.type === 'gift').length || 0;
+
+      // ─── MENSAJES / CONVERSACIONES ──────────
+      const { data: messagesData, error: messagesError } = await supabase
+        .from('messages')
+        .select('sender_id')
+        .eq('receiver_id', user.id);
+
+      if (messagesError) throw messagesError;
+
+      // Conversaciones únicas
+      const uniqueUsers = new Set(
+        messagesData?.map(m => m.sender_id)
+      );
+
+      setStats({
+        balance: Number(balanceData?.pending_balance || 0),
+        gifts: totalGifts,
+        conversations: uniqueUsers.size,
+        admirers: uniqueUsers.size
+      });
+
+    } catch (err) {
+      console.error('Error cargando estadísticas:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <span className="text-[#c4607a] text-lg">
+          Cargando estadísticas...
+        </span>
+      </div>
+    );
+  }
+
+  const rows = [
+    ['✨ Regalos recibidos', stats.gifts],
+    ['💬 Conversaciones totales', stats.conversations],
+    ['⭐ Nuevos admiradores', stats.admirers]
+  ];
+
   return (
     <div className="px-5 pt-5 flex flex-col gap-4">
+
       <div className="bg-gradient-to-br from-[#c4607a] to-[#e8a0b0] rounded-3xl p-7 text-white text-center">
-        <div className="text-xs tracking-wider uppercase opacity-85 mb-1.5">Saldo disponible</div>
-        <div className="font-serif text-5xl font-semibold leading-none">${stats.balance}</div>
-        <div className="text-sm opacity-80 mt-1">Listo para retirar</div>
-        <button className="mt-4 bg-white/20 border border-white/30 rounded-full px-6 py-2 text-sm font-semibold cursor-pointer">Retirar</button>
+
+        <div className="text-xs tracking-wider uppercase opacity-85 mb-1.5">
+          Saldo disponible
+        </div>
+
+        <div className="font-serif text-5xl font-semibold leading-none">
+          ${stats.balance}
+        </div>
+
+        <div className="text-sm opacity-80 mt-1">
+          Listo para retirar
+        </div>
+
+        <button className="mt-4 bg-white/20 border border-white/30 rounded-full px-6 py-2 text-sm font-semibold cursor-pointer">
+          Retirar
+        </button>
+
       </div>
+
       <div className="bg-[#fff9f5] border border-[rgba(196,96,122,.15)] rounded-2xl p-5">
-        <div className="text-xs font-semibold uppercase tracking-wider text-[#9a7a84] mb-4">Resumen del mes</div>
-        {rows.map(([l, v], i) => (
-          <div key={l} className={`flex justify-between py-2.5 ${i < 3 ? 'border-b border-[rgba(196,96,122,.15)]' : ''}`}>
-            <span className={i === 3 ? 'text-[#2a1a20] font-semibold' : 'text-[#9a7a84]'}>{l}</span>
-            <span className={`font-medium ${i >= 2 ? 'text-[#c4607a]' : 'text-[#2a1a20]'}`}>{v}</span>
+
+        <div className="text-xs font-semibold uppercase tracking-wider text-[#9a7a84] mb-4">
+          Resumen del mes
+        </div>
+
+        {rows.map(([label, value], i) => (
+          <div
+            key={label}
+            className={`flex justify-between py-3 ${
+              i < rows.length - 1
+                ? 'border-b border-[rgba(196,96,122,.15)]'
+                : ''
+            }`}
+          >
+
+            <span className="text-[#9a7a84]">
+              {label}
+            </span>
+
+            <span className="font-medium text-[#2a1a20]">
+              {value}
+            </span>
+
           </div>
         ))}
+
       </div>
     </div>
   );
 }
-
-// ─── FProfile ────────────────────────────────────────────────────────────────
+// ─── FProfile  COMO SE VE EL BOTON Y PANTALLA DE PERFIL────────────────────────────────────────────────────────────────
 function FProfile({ onLogout }) {
   const { user, setUser } = useAppStore();
   const [view, setView] = useState('menu');
@@ -330,25 +806,34 @@ function FProfile({ onLogout }) {
   const [name, setName] = useState(user?.display_name || '');
   const [isEditing, setIsEditing] = useState(false);
 
-  useEffect(() => { if (user?.display_name) setName(user.display_name); }, [user?.display_name]);
+  useEffect(() => {
+    if (user?.display_name) setName(user.display_name);
+  }, [user?.display_name]);
 
   const saveName = async () => {
     setIsEditing(false);
     if (!name.trim() || name === user?.display_name) return;
+
     try {
       const { error } = await supabase.from('users').update({ display_name: name.trim() }).eq('id', user.id);
       if (error) throw error;
       setUser({ ...user, display_name: name.trim() });
-    } catch (err) { console.error('Error guardando nombre:', err.message); }
+    } catch (err) {
+      console.error('Error guardando nombre:', err.message);
+    }
   };
 
   if (view === 'about') return (
     <div className="p-5 flex flex-col h-full bg-[#fdf6f0]">
       <button onClick={() => setView('menu')} className="self-start mb-4 text-[#c4607a]">← Volver</button>
       <h2 className="font-serif text-2xl mb-4">Sobre mí</h2>
-      <textarea value={bio} onChange={e => setBio(e.target.value)} maxLength={150}
+      <textarea
+        value={bio}
+        onChange={e => setBio(e.target.value)}
+        maxLength={150}
         className="w-full h-32 p-4 rounded-2xl bg-white border border-pink-100 outline-none text-sm leading-relaxed"
-        placeholder="Escribí algo corto..." />
+        placeholder="Escribí algo corto..."
+      />
       <div className="text-right text-[10px] text-[#9a7a84] mt-1">{bio.length}/150</div>
       <button onClick={() => setView('menu')} className="mt-6 bg-[#c4607a] text-white py-3.5 rounded-full font-semibold">Guardar cambios</button>
     </div>
@@ -364,10 +849,18 @@ function FProfile({ onLogout }) {
       <div className="bg-[#fff1f1] p-5 rounded-3xl border border-red-100">
         <h3 className="text-sm font-semibold text-red-700 mb-1">Centro de Ayuda</h3>
         <div className="flex flex-col gap-2 mt-4">
-          <button onClick={() => window.open('https://mail.google.com/mail/?view=cm&to=support.evaapp@gmail.com', '_blank')}
-            className="w-full py-3 bg-[#c4607a] text-white rounded-2xl text-sm font-semibold">Email Soporte 📧</button>
-          <button onClick={() => window.open('https://wa.me/541168892507', '_blank')}
-            className="w-full py-3 bg-[#25D366] text-white rounded-2xl text-sm font-semibold">WhatsApp 💬</button>
+          <button
+            onClick={() => window.open('https://mail.google.com/mail/?view=cm&to=support.evaapp@gmail.com', '_blank')}
+            className="w-full py-3 bg-[#c4607a] text-white rounded-2xl text-sm font-semibold"
+          >
+            Email Soporte 📧
+          </button>
+          <button
+            onClick={() => window.open('https://wa.me/541168892507', '_blank')}
+            className="w-full py-3 bg-[#25D366] text-white rounded-2xl text-sm font-semibold"
+          >
+            WhatsApp 💬
+          </button>
         </div>
       </div>
     </div>
@@ -378,12 +871,18 @@ function FProfile({ onLogout }) {
       <div className="text-center mb-2">
         <div className="flex justify-center mb-3.5"><AvatarUpload size="lg" /></div>
         <div className="flex items-center justify-center gap-2 mt-1">
-          {isEditing
-            ? <input value={name} autoFocus onChange={e => setName(e.target.value)}
-                onBlur={saveName} onKeyDown={e => e.key === 'Enter' && saveName()}
-                className="font-serif text-2xl font-semibold text-center bg-white text-[#2a1a20] px-3 py-1 rounded-lg outline-none border border-[#c4607a]" />
-            : <div className="font-serif text-2xl font-semibold">{user?.display_name || ''}</div>
-          }
+          {isEditing ? (
+            <input
+              value={name}
+              autoFocus
+              onChange={e => setName(e.target.value)}
+              onBlur={saveName}
+              onKeyDown={e => e.key === 'Enter' && saveName()}
+              className="font-serif text-2xl font-semibold text-center bg-white text-[#2a1a20] px-3 py-1 rounded-lg outline-none border border-[#c4607a]"
+            />
+          ) : (
+            <div className="font-serif text-2xl font-semibold">{user?.display_name || ''}</div>
+          )}
           <button onClick={() => setIsEditing(true)} className="text-[#9a7a84] hover:text-[#c4607a] bg-transparent border-none cursor-pointer">✏️</button>
         </div>
         <div className="inline-flex items-center gap-1.5 bg-[#e0f2fe] rounded-full px-4 py-1.5 mt-2.5 text-sm text-[#0369a1] font-medium">
@@ -398,16 +897,25 @@ function FProfile({ onLogout }) {
       </div>
 
       <div className="bg-[#fff9f5] border border-[rgba(196,96,122,.15)] rounded-2xl overflow-hidden">
-        {[['🌸 Sobre mí','about'],['🔒 Seguridad y Privacidad','privacy']].map(([label,key],i,arr) => (
-          <div key={key} onClick={() => setView(key)}
-            className={`flex justify-between items-center px-4 py-4 cursor-pointer active:bg-pink-50 ${i < arr.length-1 ? 'border-b border-[rgba(196,96,122,.15)]' : ''}`}>
+        {[
+          ['🌸 Sobre mí', 'about'],
+          ['🔒 Seguridad y Privacidad', 'privacy']
+        ].map(([label, key], i, arr) => (
+          <div
+            key={key}
+            onClick={() => setView(key)}
+            className={`flex justify-between items-center px-4 py-4 cursor-pointer active:bg-pink-50 ${i < arr.length - 1 ? 'border-b border-[rgba(196,96,122,.15)]' : ''}`}
+          >
             <span className="text-[15px]">{label}</span>
             <span className="text-[#9a7a84] text-lg">›</span>
           </div>
         ))}
       </div>
 
-      <button onClick={onLogout} className="w-full py-3.5 bg-transparent border border-[rgba(196,96,122,.15)] rounded-full text-[#2a1a20] text-[15px] cursor-pointer mt-auto mb-10">
+      <button
+        onClick={onLogout}
+        className="w-full py-3.5 bg-transparent border border-[rgba(196,96,122,.15)] rounded-full text-[#2a1a20] text-[15px] cursor-pointer mt-auto mb-10"
+      >
         Cerrar sesión
       </button>
     </div>
