@@ -8,43 +8,37 @@ const useAppStore = create((set, get) => ({
   isLoggedIn: false,
   isLoading:  true,
 
-  setUser: (user) => {
-    set({ user, isLoggedIn: !!user, isLoading: false });
+  setUser: (userOrFn) => {
+  const user = typeof userOrFn === 'function' ? userOrFn(get().user) : userOrFn;
+  set({ user, isLoggedIn: !!user, isLoading: false });
 
-    // Si hay usuario, sincronizar créditos en tiempo real
-    if (user) {
-      // Leer créditos actuales de Supabase al login
-      supabase
-        .from('users')
-        .select('credits')
-        .eq('id', user.id)
-        .single()
-        .then(({ data }) => {
-          if (data) set({ credits: data.credits });
-        });
+  if (user) {
+    supabase
+      .from('users')
+      .select('credits')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => {
+        if (data) set({ credits: data.credits });
+      });
 
-      // Suscribirse a cambios en tiempo real
-      if (creditsChannel) supabase.removeChannel(creditsChannel);
+    if (creditsChannel) supabase.removeChannel(creditsChannel);
 
-      creditsChannel = supabase
-        .channel(`credits_${user.id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'users',
-            filter: `id=eq.${user.id}`,
-          },
-          (payload) => {
-            if (payload.new?.credits !== undefined) {
-              set({ credits: payload.new.credits });
-            }
-          }
-        )
-        .subscribe();
-    }
-  },
+    creditsChannel = supabase
+      .channel(`credits_${user.id}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'users',
+        filter: `id=eq.${user.id}`,
+      }, (payload) => {
+        if (payload.new?.credits !== undefined) {
+          set({ credits: payload.new.credits });
+        }
+      })
+      .subscribe();
+  }
+},
 
   logout: () => {
     // Limpiar canal al cerrar sesión

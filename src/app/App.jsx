@@ -52,15 +52,17 @@ export default function App() {
           console.log('ERROR:', error);
 
           if (profile) {
-            setUser({ 
-              id:           profile.id, 
-              name:         profile.display_name,
+            setUser({
+              id: profile.id,
+              name: profile.display_name,
               display_name: profile.display_name,
-              role:         profile.role,
-              avatar_url:   profile.avatar_url || null,
-              cover_url:    profile.cover_url || null,
+              role: profile.role,
+              avatar_url: profile.avatar_url || null,
+              cover_url: profile.cover_url || null,
+              video_url: profile.video_url || null,
               verification_status: profile.verification_status || 'none',
-            });
+              credits: profile.credits || 0,
+                  });
           }
         }
       } catch (err) {

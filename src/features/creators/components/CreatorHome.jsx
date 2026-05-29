@@ -6,6 +6,7 @@ import { supabase } from '../../../services/api/supabase';
 import CreatorChatScreen from './CreatorChatScreen';
 import IDUpload from '../../verification/components/IDUpload';
 import VerificationStatus from '../../verification/components/VerificationStatus';
+import CreatorCard from '../../users/components/CreatorCard';
 
 const DAILY_PHRASES = [
   { text: "Tu presencia es el regalo más valioso que podés dar.", author: "— Eva" },
@@ -161,6 +162,7 @@ function useConversations(creatorId) {
   return conversations;
 }
 
+
 // ─── AvatarUpload  FOTO DE PERFIL MAS PRIMERA FOTO DE LA CARD ────────────────────────────────────────────────────────────
 function AvatarUpload({ size = 'sm' }) {
   const fileRef = useRef(null);
@@ -170,7 +172,38 @@ function AvatarUpload({ size = 'sm' }) {
   const [uploading, setUploading] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
-
+ 
+  // ─── Recarga video fresco desde Supabase al montar ───────────────────────
+  useEffect(() => {
+    const loadFreshStory = async () => {
+      if (!user?.id) return;
+ 
+      const { data, error } = await supabase
+        .from('users')
+        .select('video_url, video_created_at')
+        .eq('id', user.id)
+        .single();
+ 
+      if (error || !data) return;
+ 
+      setUser(prev => ({
+        ...prev,
+        video_url: data.video_url || null,
+        video_created_at: data.video_created_at || null,
+      }));
+    };
+ 
+    loadFreshStory();
+  }, [user?.id, setUser]);
+ 
+  // ─── Expiración 24hs ──────────────────────────────────────────────────────
+  const isExpired =
+    user?.video_created_at &&
+    Date.now() - new Date(user.video_created_at).getTime() > 24 * 60 * 60 * 1000;
+ 
+  const avatar = user?.avatar_url || null;
+  const hasVideo = !!user?.video_url && !isExpired;
+ 
   // ─── Subir foto ───────────────────────────────────────────────────────────
   const handleFile = async (e) => {
     const f = e.target.files?.[0];
@@ -184,22 +217,22 @@ function AvatarUpload({ size = 'sm' }) {
       const { data } = supabase.storage.from('avatars').getPublicUrl(path);
       const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
       await supabase.from('users').update({ avatar_url: publicUrl }).eq('id', user.id);
-      setUser({ ...user, avatar_url: publicUrl });
+      setUser(prev => ({ ...prev, avatar_url: publicUrl }));
     } catch (err) {
       console.error('Upload error:', err);
     } finally {
       setUploading(false);
     }
   };
-
+ 
   // ─── Subir video ──────────────────────────────────────────────────────────
   const handleVideo = async (e) => {
-    const f = e.target.files?.[0];
-    if (!f || !user?.id) return;
-    if (f.size > 30 * 1024 * 1024) {
-      alert('El video es muy pesado. Máximo 30MB.');
-      return;
-    }
+  console.log('USER EN HANDLERVIDEO:', user);  // ← acá
+  const f = e.target.files?.[0];
+  if (!f || !user?.id) {
+    console.log('FRENADO: no hay archivo o no hay user.id');  // ← y acá
+    return;
+  }
     setUploadingVideo(true);
     try {
       const ext = f.name.split('.').pop();
@@ -208,8 +241,16 @@ function AvatarUpload({ size = 'sm' }) {
       if (error) throw error;
       const { data } = supabase.storage.from('avatars').getPublicUrl(path);
       const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
-      await supabase.from('users').update({ video_url: publicUrl }).eq('id', user.id);
-      setUser({ ...user, video_url: publicUrl });
+      const now = new Date().toISOString();
+      await supabase
+        .from('users')
+        .update({ video_url: publicUrl, video_created_at: now })
+        .eq('id', user.id);
+      setUser(prev => ({
+        ...prev,
+        video_url: publicUrl,
+        video_created_at: now,
+      }));
     } catch (err) {
       console.error('Video upload error:', err);
     } finally {
@@ -217,13 +258,14 @@ function AvatarUpload({ size = 'sm' }) {
     }
   };
 
-  const avatar = user?.avatar_url || null;
-  const hasVideo = !!user?.video_url;
+  
 
+
+ 
   return (
     <>
       {/* ─── Modal video fullscreen ─────────────────────────────────────── */}
-      {showVideo && (
+      {showVideo && hasVideo && (
         <div
           onClick={() => setShowVideo(false)}
           style={{
@@ -251,10 +293,10 @@ function AvatarUpload({ size = 'sm' }) {
           >✕</button>
         </div>
       )}
-
+ 
       {/* ─── Avatar con anillo ──────────────────────────────────────────── */}
       <div className="relative" style={{ width: isLarge ? 80 : 44, height: isLarge ? 80 : 44 }}>
-
+ 
         {/* Anillo animado si tiene video */}
         <div
           onClick={() => hasVideo && setShowVideo(true)}
@@ -286,11 +328,11 @@ function AvatarUpload({ size = 'sm' }) {
             }
           </div>
         </div>
-
+ 
         {/* Botón foto 📷 */}
         <button
           onClick={() => fileRef.current?.click()}
-          className="absolute flex items-center justify-center rounded-full border-none cursor-pointer active:scale-90 transition-transform"
+          className="group absolute flex items-center justify-center rounded-full border-none cursor-pointer active:scale-90 transition-transform"
           style={{
             bottom: 0, right: 0,
             width: isLarge ? 26 : 18,
@@ -298,36 +340,42 @@ function AvatarUpload({ size = 'sm' }) {
             fontSize: isLarge ? 13 : 9,
             background: 'linear-gradient(135deg,#f472b6,#7c3aed)',
             border: '2px solid #fdf6f0',
-            zIndex: 2
+            zIndex: 3
           }}
         >
           📷
+          <span className="absolute bottom-[135%] right-0 pointer-events-none scale-0 group-hover:scale-100 transition-all duration-150 bg-black text-white text-[10px] font-medium px-2 py-1 rounded shadow-lg whitespace-nowrap z-50 origin-bottom-right">
+            {uploading ? 'Subiendo...' : 'Foto de perfil'}
+          </span>
         </button>
-
+ 
         {/* Botón video 🎥 solo en tamaño grande (perfil) */}
         {isLarge && (
           <button
             onClick={() => videoRef.current?.click()}
-            className="absolute flex items-center justify-center rounded-full border-none cursor-pointer active:scale-90 transition-transform"
+            className="group absolute flex items-center justify-center rounded-full border-none cursor-pointer active:scale-90 transition-transform"
             style={{
               bottom: 0, left: 0,
               width: 26, height: 26,
               fontSize: 13,
               background: uploadingVideo
                 ? 'rgba(139,58,156,0.5)'
-                : 'linear-gradient(135deg,#833AB4,#c4607a)',
+                : 'linear-gradient(135deg,#f472b6,#7c3aed)',
               border: '2px solid #fdf6f0',
-              zIndex: 2
+              zIndex: 3
             }}
           >
             {uploadingVideo ? '⏳' : '🎥'}
+            <span className="absolute bottom-[135%] left-0 pointer-events-none scale-0 group-hover:scale-100 transition-all duration-150 bg-black text-white text-[10px] font-medium px-2 py-1 rounded shadow-lg whitespace-nowrap z-50 origin-bottom-left">
+              {uploadingVideo ? 'Subiendo...' : 'EvaStory'}
+            </span>
           </button>
         )}
-
+ 
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
         <input ref={videoRef} type="file" accept="video/*" className="hidden" onChange={handleVideo} />
       </div>
-
+ 
       <style>{`
         @keyframes storyRingSpin {
           0% { background-position: 0% 50%; }
@@ -802,7 +850,6 @@ function FEarn() {
 function FProfile({ onLogout }) {
   const { user, setUser } = useAppStore();
   const [view, setView] = useState('menu');
-  const [bio, setBio] = useState("Amo el café y las charlas profundas 🌸");
   const [name, setName] = useState(user?.display_name || '');
   const [isEditing, setIsEditing] = useState(false);
 
@@ -822,22 +869,6 @@ function FProfile({ onLogout }) {
       console.error('Error guardando nombre:', err.message);
     }
   };
-
-  if (view === 'about') return (
-    <div className="p-5 flex flex-col h-full bg-[#fdf6f0]">
-      <button onClick={() => setView('menu')} className="self-start mb-4 text-[#c4607a]">← Volver</button>
-      <h2 className="font-serif text-2xl mb-4">Sobre mí</h2>
-      <textarea
-        value={bio}
-        onChange={e => setBio(e.target.value)}
-        maxLength={150}
-        className="w-full h-32 p-4 rounded-2xl bg-white border border-pink-100 outline-none text-sm leading-relaxed"
-        placeholder="Escribí algo corto..."
-      />
-      <div className="text-right text-[10px] text-[#9a7a84] mt-1">{bio.length}/150</div>
-      <button onClick={() => setView('menu')} className="mt-6 bg-[#c4607a] text-white py-3.5 rounded-full font-semibold">Guardar cambios</button>
-    </div>
-  );
 
   if (view === 'privacy') return (
     <div className="p-5 flex flex-col bg-[#fdf6f0] overflow-y-auto min-h-full">
@@ -868,6 +899,8 @@ function FProfile({ onLogout }) {
 
   return (
     <div className="px-5 pt-6 flex flex-col gap-4 bg-[#fdf6f0] h-full">
+
+      {/* ─── Avatar + nombre ──────────────────────────────────────────────── */}
       <div className="text-center mb-2">
         <div className="flex justify-center mb-3.5"><AvatarUpload size="lg" /></div>
         <div className="flex items-center justify-center gap-2 mt-1">
@@ -890,34 +923,47 @@ function FProfile({ onLogout }) {
         </div>
       </div>
 
+
+     {/* ─── Segunda foto ─────────────────────────────────────────────────── */}
       <div className="bg-[#fff9f5] border border-[rgba(196,96,122,.15)] rounded-2xl p-4">
         <p className="text-xs font-bold uppercase tracking-wider text-[#9a7a84] mb-3">Segunda foto de perfil</p>
         <CoverUpload />
         <p className="text-[10px] text-[#9a7a84] mt-2 text-center">Los usuarios la ven al mantener presionada tu card</p>
       </div>
 
-      <div className="bg-[#fff9f5] border border-[rgba(196,96,122,.15)] rounded-2xl overflow-hidden">
-        {[
-          ['🌸 Sobre mí', 'about'],
-          ['🔒 Seguridad y Privacidad', 'privacy']
-        ].map(([label, key], i, arr) => (
-          <div
-            key={key}
-            onClick={() => setView(key)}
-            className={`flex justify-between items-center px-4 py-4 cursor-pointer active:bg-pink-50 ${i < arr.length - 1 ? 'border-b border-[rgba(196,96,122,.15)]' : ''}`}
-          >
-            <span className="text-[15px]">{label}</span>
-            <span className="text-[#9a7a84] text-lg">›</span>
-          </div>
-        ))}
-      </div>
+      {/* ─── Preview card ─────────────────────────────────────────────────── */}
+     <div className="bg-[#0d0d0d] border border-[rgba(240, 240, 242, 0.25)] rounded-2xl p-4">
+<p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-3">✨ Así te ven los usuarios + Tu EvaStory</p>
+  <div className="w-1/2 mx-auto">
+    <CreatorCard
+      g={{
+        id: user.id,
+        display_name: user.display_name,
+        avatar_url: user.avatar_url,
+        cover_url: user.cover_url,
+        video_url: user.video_url,
+      }}
+      onSelectGirl={() => {}}
+    />
+  </div>
+  <p className="text-[10px] text-white/40 mt-2 text-center">Mantené presionada para ver tu segunda foto</p>
+</div>
 
-      <button
-        onClick={onLogout}
-        className="w-full py-3.5 bg-transparent border border-[rgba(196,96,122,.15)] rounded-full text-[#2a1a20] text-[15px] cursor-pointer mt-auto mb-10"
-      >
-        Cerrar sesión
-      </button>
-    </div>
+
+      {/* ─── Menú ─────────────────────────────────────────────────────────── */}
+      <div className="flex gap-3 mt-auto mb-10">
+  <button
+    onClick={() => setView('privacy')}
+    className="flex-1 py-3.5 bg-transparent border border-[#c4607a] rounded-full text-[#c4607a] text-[14px] cursor-pointer font-medium active:scale-95 transition-transform"
+  >
+    🔒 Seguridad
+  </button>
+  <button
+    onClick={onLogout}
+    className="flex-1 py-3.5 bg-transparent border border-[#c4607a] rounded-full text-[#c4607a] text-[14px] cursor-pointer font-medium active:scale-95 transition-transform"
+  >
+    Cerrar sesión
+  </button>
+</div>   </div>
   );
 }
