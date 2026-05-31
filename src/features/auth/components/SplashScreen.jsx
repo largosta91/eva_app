@@ -52,21 +52,19 @@ export default function SplashScreen() {
           {/* Anillo exterior degradado */}
           <div
             className="w-24 h-24 rounded-full p-[3px]"
-            style={{
-              background: 'linear-gradient(135deg, #c9a84c, #8b3a9c, #c9a84c)',
-            }}
+            style={{ background: 'linear-gradient(135deg, #c9a84c, #8b3a9c, #c9a84c)' }}
           >
-            {/* Separador negro para que se vea el anillo */}
+            {/* Separador negro */}
             <div className="w-full h-full rounded-full p-[2px] bg-[#09080f]">
               {/* Imagen */}
-              <div
-                className="w-full h-full rounded-full overflow-hidden"
-                style={{
-                  backgroundImage: 'url(/goldAppel.png)',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center 25%',
-                }} 
-              />
+              <div className="w-full h-full rounded-full overflow-hidden">
+                <img
+                  src="/goldAppel.png"
+                  alt="Eva logo"
+                  className="w-full h-full object-cover"
+                  style={{ objectPosition: 'center 30%' }}
+                />
+              </div>
             </div>
           </div>
 
@@ -132,10 +130,10 @@ export default function SplashScreen() {
           Entrar
         </button>
 
-          <div className="text-sm" style={{ color: '#3d3855' }}>
+        <div className="text-sm" style={{ color: '#3d3855' }}>
           <span style={{ color: '#D4AF37' }}>•</span> ¿Ya eres parte?{' '}
           <span style={{ color: '#D4AF37' }}>•</span>
-          </div>
+        </div>
       </div>
 
     </div>

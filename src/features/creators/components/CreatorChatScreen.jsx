@@ -51,10 +51,20 @@ export default function CreatorChatScreen({ user, onBack }) {
   const [earnings, setEarnings] = useState(0);
   const [translateEnabled, setTranslateEnabled] = useState(false);
   const [showReport, setShowReport] = useState(false);
+  const [storyUrl, setStoryUrl] = useState(null);
   const bottomRef = useRef(null);
   const audioRef = useRef(null);
 
   const conversationId = [creator?.id, user?.id].sort().join('_');
+
+  const userAvatar = user?.avatar_url || user?.avatar || null;
+  const userName = user?.display_name || user?.name || 'Usuario';
+
+  const isExpired =
+    user?.video_created_at &&
+    Date.now() - new Date(user.video_created_at).getTime() > 24 * 60 * 60 * 1000;
+
+  const hasStory = !!user?.video_url && !isExpired;
 
   const playGiftSound = (gift) => {
     try {
@@ -140,23 +150,96 @@ export default function CreatorChatScreen({ user, onBack }) {
   return (
     <div className="flex flex-col h-screen" style={{ background: '#fdf8fb', position: 'relative' }}>
 
+      {/* STORY MODAL */}
+      {storyUrl && (
+        <div
+          onClick={() => setStoryUrl(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(0,0,0,0.92)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <video
+            src={storyUrl}
+            autoPlay
+            playsInline
+            style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: 16 }}
+            onEnded={() => setStoryUrl(null)}
+            onClick={e => e.stopPropagation()}
+          />
+          <button
+            onClick={() => setStoryUrl(null)}
+            style={{
+              position: 'absolute',
+              top: 20,
+              right: 20,
+              background: 'rgba(255,255,255,0.15)',
+              border: 'none',
+              color: 'white',
+              borderRadius: '50%',
+              width: 36,
+              height: 36,
+              fontSize: 18,
+              cursor: 'pointer'
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* HEADER */}
-      <div className="flex items-center gap-3 py-3.5 px-4 shrink-0"
-        style={{ background: '#fff', borderBottom: '1px solid rgba(244,114,182,.15)' }}>
+      <div
+        className="flex items-center gap-3 py-3.5 px-4 shrink-0"
+        style={{ background: '#fff', borderBottom: '1px solid rgba(244,114,182,.15)' }}
+      >
+        <button
+          onClick={onBack}
+          className="bg-transparent border-none text-2xl cursor-pointer leading-none"
+          style={{ color: '#2d1f2e' }}
+        >
+          ←
+        </button>
 
-        <button onClick={onBack} className="bg-transparent border-none text-2xl cursor-pointer leading-none" style={{ color: '#2d1f2e' }}>←</button>
-
-        <div className="w-11 h-11 rounded-full flex items-center justify-center text-xl shrink-0 overflow-hidden"
-          style={{ background: 'linear-gradient(135deg, #f9a8d4, #e879f9)', border: '2px solid #f472b6' }}>
-          {user?.avatar
-            ? <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
-            : <span>👤</span>
-          }
+        {/* Avatar con anillo de story */}
+        <div
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: '50%',
+            flexShrink: 0,
+            padding: hasStory ? 2 : 0,
+            background: hasStory
+              ? 'linear-gradient(135deg, #c4607a, #833AB4, #FCAF45)'
+              : 'linear-gradient(135deg, #f9a8d4, #e879f9)',
+            animation: hasStory ? 'storyRingSpin 3s linear infinite' : 'none',
+            backgroundSize: '200% 200%',
+            cursor: hasStory ? 'pointer' : 'default',
+          }}
+          onClick={() => hasStory && setStoryUrl(user.video_url)}
+        >
+          <div
+            className="w-full h-full rounded-full overflow-hidden flex items-center justify-center text-xl"
+            style={{
+              border: hasStory ? '2px solid #fdf8fb' : '2px solid #f472b6',
+              background: 'linear-gradient(135deg, #f9a8d4, #e879f9)'
+            }}
+          >
+            {userAvatar
+              ? <img src={userAvatar} alt={userName} className="w-full h-full object-cover" />
+              : <span>👤</span>
+            }
+          </div>
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="font-semibold text-base truncate" style={{ color: '#2d1f2e' }}>
-            {user?.name ?? 'Usuario'}
+            {userName}
           </div>
           <button
             onClick={() => setTranslateEnabled(!translateEnabled)}
@@ -168,8 +251,10 @@ export default function CreatorChatScreen({ user, onBack }) {
           </button>
         </div>
 
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full shrink-0"
-          style={{ background: 'rgba(124,58,237,.1)', border: '1px solid rgba(124,58,237,.25)' }}>
+        <div
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full shrink-0"
+          style={{ background: 'rgba(124,58,237,.1)', border: '1px solid rgba(124,58,237,.25)' }}
+        >
           <span className="text-sm">💜</span>
           <span className="text-xs font-bold" style={{ color: '#7c3aed' }}>${earnings}</span>
         </div>
@@ -191,8 +276,11 @@ export default function CreatorChatScreen({ user, onBack }) {
           <div key={m.id || i} className={`max-w-[76%] ${m.who === 'me' ? 'self-end' : 'self-start'}`}>
             {m.gift ? (
               <div style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center',
-                padding: '10px 16px', borderRadius: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                padding: '10px 16px',
+                borderRadius: '16px',
                 background: `${m.gift.color}22`,
                 border: `1px solid ${m.gift.color}66`,
                 minWidth: '80px'
@@ -214,7 +302,10 @@ export default function CreatorChatScreen({ user, onBack }) {
                 {m.text}
               </div>
             )}
-            <div className="text-[11px] mt-1 px-1" style={{ color: '#a78b9a', textAlign: m.who === 'me' ? 'right' : 'left' }}>
+            <div
+              className="text-[11px] mt-1 px-1"
+              style={{ color: '#a78b9a', textAlign: m.who === 'me' ? 'right' : 'left' }}
+            >
               {m.time}
             </div>
           </div>
@@ -223,14 +314,18 @@ export default function CreatorChatScreen({ user, onBack }) {
       </div>
 
       {/* BARRA GANANCIAS */}
-      <div className="text-center p-1.5 text-xs"
-        style={{ background: '#fff', borderTop: '1px solid rgba(244,114,182,.14)', color: '#a78b9a' }}>
+      <div
+        className="text-center p-1.5 text-xs"
+        style={{ background: '#fff', borderTop: '1px solid rgba(244,114,182,.14)', color: '#a78b9a' }}
+      >
         💜 Ganaste <span style={{ color: '#7c3aed', fontWeight: 600 }}>${earnings}</span> en este chat
       </div>
 
       {/* INPUT */}
-      <div className="py-2.5 px-3.5 pb-5 flex gap-2.5 items-center shrink-0"
-        style={{ background: '#fff', borderTop: '1px solid rgba(244,114,182,.14)' }}>
+      <div
+        className="py-2.5 px-3.5 pb-5 flex gap-2.5 items-center shrink-0"
+        style={{ background: '#fff', borderTop: '1px solid rgba(244,114,182,.14)' }}
+      >
         <input
           value={input}
           onChange={e => setInput(e.target.value)}
@@ -256,8 +351,14 @@ export default function CreatorChatScreen({ user, onBack }) {
           onClose={() => setShowReport(false)}
         />
       )}
+
+      <style>{`
+        @keyframes storyRingSpin {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+      `}</style>
     </div>
   );
 }
-
-
