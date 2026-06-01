@@ -23,23 +23,25 @@ export default function ProfileTab({ onLogout }) {
   }, [user?.display_name]);
 
   // ─── Recarga video fresco desde Supabase al montar ───────────────────────
-  useEffect(() => {
-    const loadFreshStory = async () => {
-      if (!user?.id) return;
-      const { data, error } = await supabase
-        .from('users')
-        .select('video_url, video_created_at')
-        .eq('id', user.id)
-        .single();
-      if (error || !data) return;
-      setUser(prev => ({
-        ...prev,
+useEffect(() => {
+  const loadFreshStory = async () => {
+    if (!user?.id) return;
+    const { data, error } = await supabase
+      .from('users')
+      .select('video_url, video_created_at')
+      .eq('id', user.id)
+      .single();
+    if (error || !data) return;
+    useAppStore.setState(prev => ({
+      user: {
+        ...prev.user,
         video_url: data.video_url || null,
         video_created_at: data.video_created_at || null,
-      }));
-    };
-    loadFreshStory();
-  }, [user?.id, setUser]);
+      }
+    }));
+  };
+  loadFreshStory();
+}, [user?.id]);
 
   // ─── Expiración 24hs ──────────────────────────────────────────────────────
   const isExpired =
@@ -101,6 +103,23 @@ export default function ProfileTab({ onLogout }) {
       console.error('Video upload error:', err);
     } finally {
       setUploadingVideo(false);
+    }
+  };
+
+  // ─── Borrar EvaStory ──────────────────────────────────────────────────────
+  const handleDeleteStory = async () => {
+    if (!user?.id) return;
+    try {
+      await supabase.storage.from('avatars').remove([
+        `${user.id}/presentation.mp4`,
+        `${user.id}/presentation.webm`,
+        `${user.id}/presentation.mov`,
+        `${user.id}/presentation.avi`,
+      ]);
+      await supabase.from('users').update({ video_url: null, video_created_at: null }).eq('id', user.id);
+      setUser(prev => ({ ...prev, video_url: null, video_created_at: null }));
+    } catch (err) {
+      console.error('Delete story error:', err);
     }
   };
 
@@ -189,33 +208,51 @@ export default function ProfileTab({ onLogout }) {
             </div>
           </div>
 
+          {/* ─── Botón eliminar EvaStory ──────────────────────────────────── */}
+          {hasVideo && (
+            <button
+              onClick={handleDeleteStory}
+              title="Eliminar EvaStory"
+              className="absolute flex items-center justify-center rounded-full cursor-pointer active:scale-90 transition-transform"
+              style={{
+                top: 2, right: 2,
+                width: 22, height: 22,
+                fontSize: 10,
+                background: '#c9a84c',
+                border: '2px solid #09080f',
+                zIndex: 4,
+                color: 'black',
+                fontWeight: 'bold',
+              }}
+            >
+              ✕
+            </button>
+          )}
+
           {/* Botón foto 📷 */}
           <label
             className={`absolute bottom-1 right-1 bg-[#c9a84c] text-[#09080f] w-8 h-8 rounded-full flex items-center justify-center cursor-pointer ${uploadingPhoto ? 'opacity-50 pointer-events-none' : ''}`}
-            style={{ zIndex: 3 ,
-              border: '2px solid #09080f',}}
+            style={{ zIndex: 3, border: '2px solid #09080f' }}
           >
             📷
             <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
           </label>
 
           {/* Botón video 🎥 */}
-<button
-  onClick={() => videoRef.current?.click()}
-  className="absolute flex items-center justify-center rounded-full cursor-pointer active:scale-90 transition-transform"
-  style={{
-    bottom: 4, left: 0,
-    width: 32, height: 32,
-    fontSize: 14,
-    background: uploadingVideo
-      ? 'rgba(201, 168, 76, 0.5)'
-      : '#c9a84c',
-    border: '2px solid #09080f',
-    zIndex: 3
-  }}
->
-  {uploadingVideo ? '⏳' : '🎥'}
-</button>
+          <button
+            onClick={() => videoRef.current?.click()}
+            className="absolute flex items-center justify-center rounded-full cursor-pointer active:scale-90 transition-transform"
+            style={{
+              bottom: 4, left: 0,
+              width: 32, height: 32,
+              fontSize: 14,
+              background: uploadingVideo ? 'rgba(201, 168, 76, 0.5)' : '#c9a84c',
+              border: '2px solid #09080f',
+              zIndex: 3
+            }}
+          >
+            {uploadingVideo ? '⏳' : '🎥'}
+          </button>
 
           <input ref={videoRef} type="file" accept="video/*" className="hidden" onChange={handleVideo} />
         </div>

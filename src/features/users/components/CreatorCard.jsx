@@ -2,13 +2,29 @@ import { useState } from 'react';
 
 export default function CreatorCard({ g, onSelectGirl }) {
   const [flipped, setFlipped] = useState(false);
+  const [startX, setStartX] = useState(null);
   const hasCover = !!g.cover_url;
+
+  const handleTouchStart = (e) => {
+    setStartX(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = (e) => {
+    if (startX === null) return;
+    const endX = e.changedTouches[0].clientX;
+    const diff = startX - endX;
+    if (hasCover && Math.abs(diff) > 50) {
+     setFlipped(diff > 0);
+    }
+    setStartX(null);
+  };
 
   return (
     <div
-      onPointerDown={() => hasCover && setFlipped(true)}
-      onPointerUp={() => setFlipped(false)}
-      onPointerLeave={() => setFlipped(false)}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onMouseEnter={() => hasCover && setFlipped(true)}
+      onMouseLeave={() => setFlipped(false)}
       onClick={() => onSelectGirl({ id: g.id, name: g.display_name, img: g.avatar_url, video_url: g.video_url })}
       className="rounded-[20px] overflow-hidden bg-[#1a1826] border border-[rgba(201,168,76,.14)] aspect-[3/4] relative cursor-pointer hover:scale-[1.02]"
       style={{ transition: 'transform 0.2s' }}
@@ -27,7 +43,7 @@ export default function CreatorCard({ g, onSelectGirl }) {
           {g.display_name}
         </div>
         {hasCover && (
-          <div className="text-[10px] text-white/50">Mantené para ver más</div>
+          <div className="text-[10px] text-white/50">Deslizá para ver más</div>
         )}
       </div>
     </div>

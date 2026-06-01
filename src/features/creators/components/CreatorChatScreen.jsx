@@ -100,29 +100,30 @@ export default function CreatorChatScreen({ user, onBack }) {
       });
 
     const channel = supabase
-      .channel(`chat_${conversationId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: `receiver_id=eq.${creator.id}`
-      }, async (payload) => {
-        const m = payload.new;
+  .channel(`chat_${conversationId}`)
+  .on('postgres_changes', {
+    event: 'INSERT',
+    schema: 'public',
+    table: 'messages',
+    filter: `conversation_id=eq.${conversationId}`
+  }, async (payload) => {
+    const m = payload.new;
+    if (m.sender_id === creator.id) return; // ya lo agregamos optimistamente al enviar
 
-        let text = m.content;
-        if (translateEnabled) text = await fetchTranslation(m.content);
+    let text = m.content;
+    if (translateEnabled) text = await fetchTranslation(m.content);
 
-        const gift = parseGift(m.content);
-        if (gift) playGiftSound(gift);
+    const gift = parseGift(m.content);
+    if (gift) playGiftSound(gift);
 
-        setMessages(prev => {
-          if (prev.some(msg => msg.id === m.id)) return prev;
-          return [...prev, { id: m.id, who: 'them', text, time: nowTime(), gift }];
-        });
+    setMessages(prev => {
+      if (prev.some(msg => msg.id === m.id)) return prev;
+      return [...prev, { id: m.id, who: 'them', text, time: nowTime(), gift }];
+    });
 
-        setEarnings(e => e + 1);
-      })
-      .subscribe();
+    setEarnings(e => e + 1);
+  })
+  .subscribe();
 
     return () => supabase.removeChannel(channel);
   }, [creator?.id, user?.id, conversationId, translateEnabled]);
@@ -318,7 +319,7 @@ export default function CreatorChatScreen({ user, onBack }) {
         className="text-center p-1.5 text-xs"
         style={{ background: '#fff', borderTop: '1px solid rgba(244,114,182,.14)', color: '#a78b9a' }}
       >
-        💜 Ganaste <span style={{ color: '#7c3aed', fontWeight: 600 }}>${earnings}</span> en este chat
+        💜 <span style={{ color: '#7c3aed', fontWeight: 600 }}> Mantente conectada: las creadoras activas tienen más oportunidades de generar ingresos...💜</span> 
       </div>
 
       {/* INPUT */}

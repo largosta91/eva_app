@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { supabase } from '../../services/api/supabase';
 
-let creditsChannel = null; // Canal realtime de créditos
+let creditsChannel = null;
+let creditsChannelUserId = null; // para saber a qué user pertenece el canal activo
 
 const useAppStore = create((set, get) => ({
   user:      null,
@@ -9,42 +10,52 @@ const useAppStore = create((set, get) => ({
   isLoading:  true,
 
   setUser: (userOrFn) => {
-  const user = typeof userOrFn === 'function' ? userOrFn(get().user) : userOrFn;
-  set({ user, isLoggedIn: !!user, isLoading: false });
+    const user = typeof userOrFn === 'function' ? userOrFn(get().user) : userOrFn;
+    set({ user, isLoggedIn: !!user, isLoading: false });
 
-  if (user) {
-    supabase
-      .from('users')
-      .select('credits')
-      .eq('id', user.id)
-      .single()
-      .then(({ data }) => {
-        if (data) set({ credits: data.credits });
-      });
+    if (user) {
+      // Fetch inicial de créditos
+      supabase
+        .from('users')
+        .select('credits')
+        .eq('id', user.id)
+        .single()
+        .then(({ data }) => {
+          if (data) set({ credits: data.credits });
+        });
 
-    if (creditsChannel) supabase.removeChannel(creditsChannel);
+      // Solo crear canal si no existe uno ya para este user
+      if (creditsChannelUserId === user.id) return;
 
-    creditsChannel = supabase
-      .channel(`credits_${user.id}`)
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'users',
-        filter: `id=eq.${user.id}`,
-      }, (payload) => {
-        if (payload.new?.credits !== undefined) {
-          set({ credits: payload.new.credits });
-        }
-      })
-      .subscribe();
-  }
-},
+      if (creditsChannel) {
+        supabase.removeChannel(creditsChannel);
+        creditsChannel = null;
+        creditsChannelUserId = null;
+      }
+
+      creditsChannel = supabase
+        .channel(`credits_${user.id}`)
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'users',
+          filter: `id=eq.${user.id}`,
+        }, (payload) => {
+          if (payload.new?.credits !== undefined) {
+            set({ credits: payload.new.credits });
+          }
+        })
+        .subscribe();
+
+      creditsChannelUserId = user.id;
+    }
+  },
 
   logout: () => {
-    // Limpiar canal al cerrar sesión
     if (creditsChannel) {
       supabase.removeChannel(creditsChannel);
       creditsChannel = null;
+      creditsChannelUserId = null;
     }
     set({ user: null, isLoggedIn: false, credits: 0 });
   },

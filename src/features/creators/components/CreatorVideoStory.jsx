@@ -17,7 +17,7 @@ export function StoryRing({ hasVideo, size = 44, children, onClick }) {
         width: size,
         height: size,
         borderRadius: '50%',
-        padding: 2,
+        padding: 4,
         background: 'linear-gradient(135deg, #c4607a, #833AB4, #FCAF45)',
         backgroundSize: '200% 200%',
         animation: 'storyRingSpin 3s linear infinite',

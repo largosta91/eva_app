@@ -209,6 +209,21 @@ function AvatarUpload({ size = 'sm' }) {
     finally { setUploadingVideo(false); }
   };
 
+  const handleDeleteStory = async () => {
+    if (!user?.id) return;
+    try {
+      // Intenta borrar las extensiones más comunes
+      await supabase.storage.from('avatars').remove([
+        `${user.id}/presentation.mp4`,
+        `${user.id}/presentation.webm`,
+        `${user.id}/presentation.mov`,
+        `${user.id}/presentation.avi`,
+      ]);
+      await supabase.from('users').update({ video_url: null, video_created_at: null }).eq('id', user.id);
+      setUser(prev => ({ ...prev, video_url: null, video_created_at: null }));
+    } catch (err) { console.error('Delete story error:', err); }
+  };
+
   return (
     <>
       {showVideo && hasVideo && (
@@ -224,6 +239,18 @@ function AvatarUpload({ size = 'sm' }) {
             {uploading ? <span className="text-lg animate-pulse">⏳</span> : avatar ? <img src={avatar} alt="perfil" className="w-full h-full object-cover rounded-full" /> : '🌺'}
           </div>
         </div>
+
+        {/* Botón eliminar EvaStory — solo en lg y cuando hay historia activa */}
+        {isLarge && hasVideo && (
+          <button
+            onClick={handleDeleteStory}
+            title="Eliminar EvaStory"
+            className="absolute flex items-center justify-center rounded-full border-none cursor-pointer active:scale-90 transition-transform"
+            style={{ top: 0, right: 0, width: 20, height: 20, fontSize: 10, background: 'rgba(139,58,156,0.5)', border: '2px solid #fdf6f0', zIndex: 4, color: 'white', fontWeight: 'bold', lineHeight: 1 }}
+          >
+            ✕
+          </button>
+        )}
 
         <button onClick={() => fileRef.current?.click()} className="group absolute flex items-center justify-center rounded-full border-none cursor-pointer active:scale-90 transition-transform" style={{ bottom: 0, right: 0, width: isLarge ? 26 : 18, height: isLarge ? 26 : 18, fontSize: isLarge ? 13 : 9, background: 'linear-gradient(135deg,#f472b6,#7c3aed)', border: '2px solid #fdf6f0', zIndex: 3 }}>
           📷
@@ -255,7 +282,6 @@ function AvatarUpload({ size = 'sm' }) {
     </>
   );
 }
-
 // ─── CoverUpload ──────────────────────────────────────────────────────────────
 function CoverUpload() {
   const fileRef = useRef(null);

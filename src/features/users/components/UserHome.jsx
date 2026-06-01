@@ -209,7 +209,7 @@ export default function UserHome() {
         ].map(t => (
           <button
             key={t.key}
-            onClick={() => setTab(t.key)}
+            onClick={() => t.key === 'credits' ? navigate(ROUTES.PAYWALL) : setTab(t.key)}
             className={`flex-1 flex flex-col items-center justify-center gap-1 bg-transparent border-none cursor-pointer transition-all duration-200 ${
               tab === t.key ? 'text-[#c9a84c]' : 'text-[#7a748f]'
             }`}

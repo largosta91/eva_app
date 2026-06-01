@@ -4,10 +4,10 @@ import { ROUTES } from '../../../constants/routes';
 import useAppStore from '../../../app/store/useAppStore';
 
 const PACKS = [
-  { id: 1, credits: 100,  price: '$4.99',  label: 'Starter', bonus: null,          best: false },
-  { id: 2, credits: 300,  price: '$9.99',  label: 'Popular', bonus: '+50 gratis',  best: true  },
-  { id: 3, credits: 700,  price: '$19.99', label: 'Premium', bonus: '+200 gratis', best: false },
-  { id: 4, credits: 1500, price: '$39.99', label: 'Elite',   bonus: '+600 gratis', best: false },
+  { id: 1, credits: 1000,  price: '$9.99',  label: 'Starter', bonus: null,           best: false },
+  { id: 2, credits: 3000,  price: '$24.99', label: 'Popular', bonus: '+500 gratis',  best: true  },
+  { id: 3, credits: 7000,  price: '$49.99', label: 'Premium', bonus: '+1500 gratis', best: false },
+  { id: 4, credits: 15000, price: '$99.99', label: 'Elite',   bonus: '+4000 gratis', best: false },
 ];
 
 export default function PaywallGate() {
@@ -25,7 +25,7 @@ export default function PaywallGate() {
   const handleBuy = () => {
     if (!sel) return;
     const pack  = PACKS.find(p => p.id === sel);
-    const bonus = pack.bonus ? parseInt(pack.bonus) : 0;
+    const bonus = pack.bonus ? parseInt(pack.bonus.replace(/\D/g, '')) : 0;
 
     // TODO BACK: reemplazar por llamada real al backend:
     // await paymentService.purchase(pack.id)
@@ -51,7 +51,7 @@ export default function PaywallGate() {
       {/* Botón volver — siempre a UserHome, nunca a la llamada sin pagar */}
       <button
         onClick={handleBack}
-        className="absolute top-11 left-4 z-20 text-[#7a748f] hover:text-[#c9a84c] transition-colors text-3xl bg-transparent border-none cursor-pointer"
+        className="absolute top-8 left-2 z-20 text-[#7a748f] hover:text-[#c9a84c] transition-colors text-4xl bg-transparent border-none cursor-pointer p-3"
       >
         ‹
       </button>
