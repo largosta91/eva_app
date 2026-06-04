@@ -159,6 +159,7 @@ function AvatarUpload({ size = 'sm' }) {
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
 
+
   useEffect(() => {
     const loadFreshStory = async () => {
       if (!user?.id) return;
@@ -355,13 +356,15 @@ function VerificationLoading() {
 }
 
 // ─── CreatorHome ──────────────────────────────────────────────────────────────
-export default function CreatorHome() {
+  export default function CreatorHome() {
   const navigate = useNavigate();
   const { user, logout } = useAppStore();
   const [tab, setTab] = useState('home');
   const [selectedUser, setSelectedUser] = useState(null);
   const [verifStatus, setVerifStatus] = useState(user?.verification_status ?? 'none');
   const [verifLoading, setVerifLoading] = useState(true);
+  const [scrolled, setScrolled] = useState(false);
+  const scrollRef = useRef(null);
 
   const syncVerificationStatus = useCallback(async () => {
     if (!user?.id) { setVerifStatus('none'); setVerifLoading(false); return; }
@@ -390,32 +393,87 @@ export default function CreatorHome() {
 
   return (
     <div className="w-full h-screen bg-[#fdf6f0] text-[#2a1a20] flex flex-col overflow-hidden">
-      <div className="grid grid-cols-3 items-center py-3.5 px-5 border-b border-[rgba(196,96,122,.15)] shrink-0" style={{ background: 'linear-gradient(135deg, #833AB4, #C13584, #E1306C, #F77737, #FCAF45)' }}>
-        <div className="w-9 h-9 rounded-full p-[1.5px] bg-gradient-to-br from-[#c4607a] to-[#e8a0b0] shadow-sm">
-          <div className="w-full h-full rounded-full p-[1.5px] bg-[#fff9f5] overflow-hidden">
-            <div className="w-full h-full rounded-full" style={{ backgroundImage: 'url(/logo.png)', backgroundSize: 'cover', backgroundPosition: 'center 25%' }} />
-          </div>
-        </div>
-        <div className="flex justify-center">
-          <span className="font-serif text-2xl font-semibold text-white">Eva</span>
-        </div>
-        <div className="flex justify-end"><div className="w-9 h-9" /></div>
+  <div
+    className={`grid grid-cols-3 items-center py-3.5 px-5 shrink-0 transition-all duration-300 ${
+      scrolled
+        ? 'border-b border-white/10'
+        : 'border-b border-[rgba(196,96,122,.15)]'
+    }`}
+    style={{
+      background: scrolled
+        ? 'linear-gradient(135deg, #833AB4, #C13584, #E1306C, #F77737, #FCAF45)'
+        : 'white',
+    }}
+  >
+    <div
+      className={`w-9 h-9 rounded-full p-[1.5px] shadow-sm transition-all duration-300 ${
+        scrolled
+          ? 'bg-white/20'
+          : 'bg-gradient-to-br from-[#c4607a] to-[#e8a0b0]'
+      }`}
+    >
+      <div
+        className={`w-full h-full rounded-full p-[1.5px] overflow-hidden transition-all duration-300 ${
+          scrolled ? 'bg-black/10' : 'bg-[#fff9f5]'
+        }`}
+      >
+        <div
+          className="w-full h-full rounded-full"
+          style={{
+            backgroundImage: 'url(/logo.png)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center 25%',
+          }}
+        />
       </div>
+    </div>
 
-      <div className="flex-1 overflow-y-auto">
-        {tab === 'home'    && <FHome onSelectUser={setSelectedUser} />}
-        {tab === 'chats'   && <FChats onSelectUser={setSelectedUser} />}
-        {tab === 'earn'    && <FEarn />}
-        {tab === 'profile' && <FProfile onLogout={() => { logout(); navigate(ROUTES.SPLASH); }} />}
-      </div>
+    <div className="flex justify-center">
+      <span
+        className={`font-serif text-2xl font-semibold transition-colors duration-300 ${
+          scrolled ? 'text-white/90' : 'text-[#c4607a]'
+        }`}
+      >
+        Eva
+      </span>
+    </div>
 
-      <div className="flex bg-[#fff9f5] border-t border-[rgba(196,96,122,.15)] pt-2.5 pb-5 shrink-0">
-        {[['home','🏠','Inicio'],['chats','💬','Chats'],['earn','💰','Ganancias'],['profile','📷','Perfil']].map(([key, icon, label]) => (
-          <button key={key} onClick={() => setTab(key)} className={`flex-1 flex flex-col items-center gap-1 text-[10px] font-medium uppercase tracking-wider bg-transparent border-none cursor-pointer transition-colors ${tab === key ? 'text-[#c4607a]' : 'text-[#9a7a84]'}`}>
-            <span className="text-2xl">{icon}</span>{label}
-          </button>
-        ))}
-      </div>
+    <div className="flex justify-end">
+      <div className="w-9 h-9" />
+    </div>
+  </div>
+
+  <div
+    ref={scrollRef}
+    onScroll={() => setScrolled(scrollRef.current?.scrollTop > 60)}
+    className="flex-1 overflow-y-auto"
+  >
+    {tab === 'home'    && <FHome onSelectUser={setSelectedUser} />}
+    {tab === 'chats'   && <FChats onSelectUser={setSelectedUser} />}
+    {tab === 'earn'    && <FEarn />}
+    {tab === 'profile' && <FProfile onLogout={() => { logout(); navigate(ROUTES.SPLASH); }} />}
+  </div>
+
+  <div
+  className="flex bg-[#0a0a0a] border-t border-[rgba(255,255,255,.08)] pt-2.5 pb-5 shrink-0"
+  style={{
+    background: 'linear-gradient(to top, #0a0a0a 85%, rgba(10,10,10,0.7) 95%, transparent 100%)'
+  }}
+>
+  {[['home','🏠','Inicio'],['chats','💬','Chats'],['earn','💰','Ganancias'],['profile','📷','Perfil']].map(([key, icon, label]) => (
+    <button
+      key={key}
+      onClick={() => setTab(key)}
+      className={`flex-1 flex flex-col items-center gap-1 text-[10px] font-medium uppercase tracking-wider bg-transparent border-none cursor-pointer transition-colors ${
+        tab === key ? 'text-white' : 'text-white/50'
+      }`}
+    >
+      <span className="text-2xl">{icon}</span>
+      {label}
+    </button>
+  ))}
+</div>
+
     </div>
   );
 }
@@ -468,7 +526,7 @@ function FHome({ onSelectUser }) {
 
       <div className="px-5 pt-4 flex flex-col gap-3">
         <DailyCard />
-        <div className="text-[11px] font-bold uppercase tracking-[1.5px] text-[#9a7a84] mb-1 mt-3">Solicitudes nuevas</div>
+        <div className="text-[11px] font-bold uppercase tracking-[1.5px] text-[#9a7a84] mb-1 mt-3">Solicitudes nuevas 🢃 </div>
         {conversations.length === 0
           ? <div className="text-center text-[#9a7a84] py-10 bg-white/30 rounded-3xl border border-dashed border-pink-200 text-sm italic">No hay mensajes aún</div>
           : conversations.map(u => (
