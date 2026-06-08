@@ -72,7 +72,7 @@ const GiftPanel = ({ onSend, onClose, context = "chat" }) => {
               {gift.name}
             </span>
             <span style={{ fontSize: "10px", color: "#c9a84c" }}>
-              💎 {gift.cost}
+            💎 {gift.cost}
             </span>
           </button>
         ))}

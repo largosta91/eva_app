@@ -478,21 +478,26 @@ function VerificationLoading() {
   );
 }
 
-// ─── FHome ────────────────────────────────────────────────────────────────────
 function FHome({ onSelectUser }) {
   const { user } = useAppStore();
   const conversations = useConversations(user?.id);
-  const [dailyEarnings, setDailyEarnings] = useState(0);
+
+  const [pendingBalance, setPendingBalance] = useState(0);
   const [chatCount, setChatCount] = useState(0);
   const [storyUrl, setStoryUrl] = useState(null);
 
   const loadStats = useCallback(async () => {
     if (!user) return;
-    const today = new Date(); today.setHours(0, 0, 0, 0);
     try {
-      const { data: gifts, error } = await supabase.from('gifts').select('value').eq('creator_id', user.id).gte('created_at', today.toISOString());
-      if (!error && gifts) setDailyEarnings(gifts.reduce((acc, g) => acc + (parseFloat(g.value) || 0), 0).toFixed(2));
-    } catch (err) { console.error('Error en loadStats:', err); }
+      const { data, error } = await supabase
+        .from('creator_balances')
+        .select('pending_balance')
+        .eq('creator_id', user.id)
+        .single();
+      if (!error) setPendingBalance(data?.pending_balance ?? 0);
+    } catch (err) {
+      console.error('Error en loadStats:', err);
+    }
     setChatCount(conversations.length);
   }, [user, conversations.length]);
 
@@ -509,16 +514,31 @@ function FHome({ onSelectUser }) {
       <div className="bg-[#fff9f5] border-b border-[rgba(196,96,122,.15)]">
         <div className="flex items-center justify-between px-5 pt-5 pb-3">
           <div>
-            <div className="font-serif text-2xl font-semibold text-[#2a1a20]">Hola 🎀</div>
-            <div className="text-sm text-[#9a7a84] mt-0.5">Bienvenida de nuevo</div>
+            <div className="font-serif text-2xl font-semibold text-[#2a1a20]">
+              Hola 🎀
+            </div>
+            <div className="text-sm text-[#9a7a84] mt-0.5">
+              Bienvenida de nuevo
+            </div>
           </div>
           <AvatarUpload size="sm" />
         </div>
+
         <div className="flex gap-3 px-4 py-3">
-          {[{ label: 'Hoy', value: `$${dailyEarnings}` }, { label: 'Chats', value: chatCount }, { label: 'Rating', value: '4.9' }].map((item) => (
-            <div key={item.label} className="flex-1 bg-white/50 backdrop-blur-sm border border-[rgba(196,96,122,.1)] p-3 rounded-2xl text-center shadow-sm">
-              <div className="text-[10px] text-[#9a7a84] uppercase font-bold mb-1 tracking-wider">{item.label}</div>
-              <div className="font-serif text-xl font-bold text-[#c4607a]">{item.value}</div>
+          {[
+            { label: 'Chats', value: chatCount },
+            { label: 'Disponible', value: `$${pendingBalance.toLocaleString('es-AR')}` }
+          ].map((item) => (
+            <div
+              key={item.label}
+              className="flex-1 bg-white/50 backdrop-blur-sm border border-[rgba(196,96,122,.1)] p-3 rounded-2xl text-center shadow-sm"
+            >
+              <div className="text-[10px] text-[#9a7a84] uppercase font-bold mb-1 tracking-wider">
+                {item.label}
+              </div>
+              <div className="font-serif text-xl font-bold text-[#c4607a]">
+                {item.value}
+              </div>
             </div>
           ))}
         </div>
@@ -526,25 +546,43 @@ function FHome({ onSelectUser }) {
 
       <div className="px-5 pt-4 flex flex-col gap-3">
         <DailyCard />
-        <div className="text-[11px] font-bold uppercase tracking-[1.5px] text-[#9a7a84] mb-1 mt-3">Solicitudes nuevas 🢃 </div>
-        {conversations.length === 0
-          ? <div className="text-center text-[#9a7a84] py-10 bg-white/30 rounded-3xl border border-dashed border-pink-200 text-sm italic">No hay mensajes aún</div>
-          : conversations.map(u => (
-            <div key={u.id} onClick={() => onSelectUser(u)} className="flex items-center gap-3.5 bg-[#fff9f5] border border-[rgba(196,96,122,.15)] rounded-2xl p-4 cursor-pointer active:scale-[0.98] transition-transform">
-              <StoryAvatar u={u} size={48} onStoryClick={setStoryUrl} />
+
+        <div className="text-[11px] font-bold uppercase tracking-[1.5px] text-[#9a7a84] mb-1 mt-3">
+          Chats recientes
+        </div>
+
+        {conversations.length === 0 ? (
+          <div className="text-center text-[#9a7a84] py-10 bg-white/30 rounded-3xl border border-dashed border-pink-200 text-sm italic">
+            No hay mensajes aún
+          </div>
+        ) : (
+          conversations.map((u) => (
+            <div
+              key={u.id}
+              onClick={() => onSelectUser(u)}
+              className="flex items-center gap-3.5 bg-[#fff9f5] border border-[rgba(196,96,122,.15)] rounded-2xl p-4 cursor-pointer active:scale-[0.98] transition-transform"
+            >
+              <StoryAvatar
+                u={u}
+                size={48}
+                onStoryClick={setStoryUrl}
+              />
               <div className="flex-1 min-w-0">
-                <div className="font-medium text-[15px] mb-0.5 text-[#2a1a20]">{u.name}</div>
-                <div className="text-xs text-[#9a7a84] truncate">{u.preview}</div>
+                <div className="font-medium text-[15px] mb-0.5 text-[#2a1a20]">
+                  {u.name}
+                </div>
+                <div className="text-xs text-[#9a7a84] truncate">
+                  {u.preview}
+                </div>
               </div>
               <div className="text-[#c4607a] text-lg">›</div>
             </div>
           ))
-        }
+        )}
       </div>
     </div>
   );
 }
-
 // ─── FChats ───────────────────────────────────────────────────────────────────
 function FChats({ onSelectUser }) {
   const { user } = useAppStore();

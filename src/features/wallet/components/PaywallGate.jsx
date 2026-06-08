@@ -4,17 +4,20 @@ import { ROUTES } from '../../../constants/routes';
 import useAppStore from '../../../app/store/useAppStore';
 
 const PACKS = [
-  { id: 1, credits: 1000,  price: '$9.99',  label: 'Starter', bonus: null,           best: false },
-  { id: 2, credits: 3000,  price: '$24.99', label: 'Popular', bonus: '+500 gratis',  best: true  },
-  { id: 3, credits: 7000,  price: '$49.99', label: 'Premium', bonus: '+1500 gratis', best: false },
-  { id: 4, credits: 15000, price: '$99.99', label: 'Elite',   bonus: '+4000 gratis', best: false },
+  { id: 1, credits: 500,   price: '$4.99',  label: 'Mini',    bonus: null, best: false },
+  { id: 2, credits: 1000,  price: '$9.99',  label: 'Starter', bonus: null, best: false },
+  { id: 3, credits: 3000,  price: '$24.99', label: 'Popular', bonus: null, best: true  }, // ← "Popular" ahora es el destacado
+  { id: 4, credits: 6000,  price: '$49.99', label: 'Premium', bonus: null, best: false }, 
+  { id: 5, credits: 11000, price: '$99.99', label: 'Elite',   bonus: null, best: false },
 ];
 
 export default function PaywallGate() {
   const navigate   = useNavigate();
   const location   = useLocation();
   const setCredits = useAppStore(s => s.setCredits);
-  const [sel, setSel] = useState(null);
+  
+  // Inicializamos en 3 para que el pack "Popular" aparezca pre-seleccionado
+  const [sel, setSel] = useState(3); 
 
   // ─── BACK: cuando navegues acá desde VideoCall, pasá el estado así: ──────────
   // navigate(ROUTES.PAYWALL, { state: { fromCall: true, girlId: girl.id } })

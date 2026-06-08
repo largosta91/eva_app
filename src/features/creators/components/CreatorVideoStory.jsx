@@ -2,7 +2,7 @@
 // Maneja subida y reproducción del video de presentación de la creadora
 // El video vive dentro del avatar con anillo animado estilo Instagram
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { supabase } from '../../../services/api/supabase';
 import useAppStore from '../../../app/store/useAppStore';
 
@@ -74,7 +74,9 @@ export function StoryModal({ videoUrl, isOpen, onClose }) {
 }
 
 // ─── Hook para subir el video ─────────────────────────────────────────────────
+// eslint-disable-next-line react-refresh/only-export-components
 export function useVideoUpload() {
+
   const { user, setUser } = useAppStore();
   const [uploading, setUploading] = useState(false);
 

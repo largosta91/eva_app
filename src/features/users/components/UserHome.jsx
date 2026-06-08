@@ -10,64 +10,58 @@ import ProfileTab from './ProfileTab';
 import { supabase } from '../../../services/api/supabase';
 import { StoryRing, StoryModal } from '../../creators/components/CreatorVideoStory';
 
-// Eliminamos CHAT_HISTORY fijo para usar datos reales de la DB
-
 function ChatsTab({ onSelectGirl }) {
   const { user } = useAppStore();
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
-const [storyUrl, setStoryUrl] = useState(null); // ← agregá esta
-
-  const fetchConversations = async () => {
-    if (!user?.id) return;
-    
-    // Traemos los últimos mensajes donde el usuario participa
-    const { data, error } = await supabase
-      .from('messages')
-      .select('sender_id, receiver_id, content, created_at, is_read')
-      .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
-      .order('created_at', { ascending: false });
-
-    if (error) return console.error(error);
-
-    // Lógica para agrupar por contacto y quedarnos solo con el último mensaje
-    const chatsMap = {};
-    data.forEach(m => {
-    const contactId = m.sender_id === user.id ? m.receiver_id : m.sender_id;
-    if (!chatsMap[contactId]) {
-      chatsMap[contactId] = {
-      id: contactId,
-      preview: m.content,
-      unread: !m.is_read && m.receiver_id === user.id,
-      time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      video_url: null // ← se rellena después con el query de profiles
-    };
-  }
-});
-
-    // Buscamos los nombres/fotos de esos contactos
-    const contactIds = Object.keys(chatsMap);
-    if (contactIds.length > 0) {
-      const { data: profiles } = await supabase
-        .from('users')
-        .select('id, display_name, avatar_url, video_url')
-        .in('id', contactIds);
-
-        profiles?.forEach(p => {
-        chatsMap[p.id].name = p.display_name;
-        chatsMap[p.id].img = p.avatar_url;
-        chatsMap[p.id].video_url = p.video_url; // ← falta esta línea
-        });
-    }
-
-    setConversations(Object.values(chatsMap));
-    setLoading(false);
-  };
+  const [storyUrl, setStoryUrl] = useState(null);
 
   useEffect(() => {
+    if (!user?.id) return;
+
+    const fetchConversations = async () => {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('sender_id, receiver_id, content, created_at, is_read')
+        .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
+        .order('created_at', { ascending: false });
+
+      if (error) return console.error(error);
+
+      const chatsMap = {};
+      data.forEach(m => {
+        const contactId = m.sender_id === user.id ? m.receiver_id : m.sender_id;
+        if (!chatsMap[contactId]) {
+          chatsMap[contactId] = {
+            id: contactId,
+            preview: m.content,
+            unread: !m.is_read && m.receiver_id === user.id,
+            time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            video_url: null,
+          };
+        }
+      });
+
+      const contactIds = Object.keys(chatsMap);
+      if (contactIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('users')
+          .select('id, display_name, avatar_url, video_url')
+          .in('id', contactIds);
+
+        profiles?.forEach(p => {
+          chatsMap[p.id].name = p.display_name;
+          chatsMap[p.id].img = p.avatar_url;
+          chatsMap[p.id].video_url = p.video_url;
+        });
+      }
+
+      setConversations(Object.values(chatsMap));
+      setLoading(false);
+    };
+
     fetchConversations();
 
-    // Realtime: Si llega un mensaje nuevo, refrescamos la lista
     const channel = supabase
       .channel('user_chats_list')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => {
@@ -75,7 +69,9 @@ const [storyUrl, setStoryUrl] = useState(null); // ← agregá esta
       })
       .subscribe();
 
-    return () => supabase.removeChannel(channel);
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user?.id]);
 
   if (loading) return <div className="p-10 text-center text-[#7a748f]">Cargando conversaciones...</div>;
@@ -158,7 +154,6 @@ export default function UserHome() {
 
   return (
     <div className="w-full h-screen bg-[#09080f] text-[#ede8ff] flex flex-col overflow-hidden">
-      {/* TOP BAR */}
       <div className="grid grid-cols-3 items-center py-3.5 px-5 bg-[#111018] border-b border-[rgba(201,168,76,.14)] shrink-0">
         <div className="flex items-center justify-start">
           <div className="w-9 h-9 rounded-full p-[1.5px] bg-gradient-to-br from-[#8b3a9c] to-[#c9a84c]">
@@ -182,7 +177,7 @@ export default function UserHome() {
         </div>
 
         <div className="flex justify-end">
-          <div 
+          <div
             onClick={() => setTab('credits')}
             className="flex items-center gap-1.5 bg-[#1a1826] border border-[rgba(201,168,76,.14)] rounded-full py-2 px-4 text-sm font-medium text-[#c9a84c] cursor-pointer active:scale-95 transition-transform"
           >
@@ -191,7 +186,6 @@ export default function UserHome() {
         </div>
       </div>
 
-      {/* CONTENT */}
       <div className="flex-1 overflow-y-auto">
         {tab === 'home'    && <HomeTab onSelectGirl={setSelectedGirl} />}
         {tab === 'chats'   && <ChatsTab onSelectGirl={setSelectedGirl} />}
@@ -199,7 +193,6 @@ export default function UserHome() {
         {tab === 'profile' && <ProfileTab onLogout={handleLogout} />}
       </div>
 
-      {/* TAB BAR */}
       <div className="flex bg-[#111018] border-t border-[rgba(201,168,76,.14)] pt-2.5 pb-6 shrink-0">
         {[
           { key: 'home',    icon: '🔥', label: 'Explorar' },
@@ -216,12 +209,12 @@ export default function UserHome() {
           >
             <div className="h-10 flex items-center justify-center">
               {t.key === 'credits' ? (
-                <img 
-                  src={t.icon} 
-                  alt="Eva Gold" 
+                <img
+                  src={t.icon}
+                  alt="Eva Gold"
                   className={`w-9 h-9 object-contain transition-transform duration-200 ${
                     tab === t.key ? 'scale-110 opacity-100' : 'opacity-60'
-                  }`} 
+                  }`}
                 />
               ) : (
                 <span className={`text-3xl leading-none transition-transform ${tab === t.key ? 'scale-110' : ''}`}>{t.icon}</span>
