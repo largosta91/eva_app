@@ -7,22 +7,41 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-supabase': ['@supabase/supabase-js'],
-          'feature-auth': [
-            './src/features/auth/components/LoginForm.jsx',
-            './src/features/auth/components/RegisterForm.jsx',
-            './src/features/auth/components/SplashScreen.jsx',
-            './src/features/auth/components/JoinCreator.jsx',
-            './src/features/auth/components/VerifyScreen.jsx',
-          ],
-          'feature-calls': [
-            './src/features/calls/components/VideoCall.jsx',
-            './src/features/calls/components/CreatorVideoCall.jsx',
-            './src/features/calls/components/CallControls.jsx',
-            './src/features/calls/components/MiniChat.jsx',
-          ],
+        manualChunks(id) {
+          // 1. Bloque de React y sus dependencias principales
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom') || id.includes('node_modules/react-router-dom')) {
+            return 'vendor-react';
+          }
+          
+          // 2. Bloque de Supabase
+          if (id.includes('node_modules/@supabase')) {
+            return 'vendor-supabase';
+          }
+          
+          // 3. Bloque de Autenticación (Auth)
+          if (id.includes('src/features/auth/components/')) {
+            if (
+              id.includes('LoginForm') ||
+              id.includes('RegisterForm') ||
+              id.includes('SplashScreen') ||
+              id.includes('JoinCreator') ||
+              id.includes('VerifyScreen')
+            ) {
+              return 'feature-auth';
+            }
+          }
+          
+          // 4. Bloque de Videollamadas (Calls)
+          if (id.includes('src/features/calls/components/')) {
+            if (
+              id.includes('VideoCall') ||
+              id.includes('CreatorVideoCall') ||
+              id.includes('CallControls') ||
+              id.includes('MiniChat')
+            ) {
+              return 'feature-calls';
+            }
+          }
         },
       },
     },
