@@ -427,6 +427,9 @@ export default function ChatScreen({ girl, onBack }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [showVC, setShowVC] = useState(false);
+  const [callToken, setCallToken] = useState(null);
+  const [callRoom, setCallRoom] = useState(null);
+  const [callLoading, setCallLoading] = useState(false);
   const [showGifts, setShowGifts] = useState(false);
   const [translateEnabled, setTranslateEnabled] = useState(false);
   const [sendingGift, setSendingGift] = useState(false);
@@ -536,6 +539,76 @@ export default function ChatScreen({ girl, onBack }) {
   // =========================
   // MENSAJES SEGUROS VIA RPC
   // =========================
+
+const startCall = async () => {
+  if (credits < 150) {
+    showToast("Necesitás al menos 150 créditos para llamar");
+    return;
+  }
+
+  if (callLoading) return;
+  setCallLoading(true);
+
+  const roomName = `call_${[user.id, girl.id].sort().join('_')}`;
+
+  try {
+    // 1. Generar token LiveKit
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
+
+    const res = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/livekit-token`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          roomName,
+          participantName: user.display_name || 'Usuario',
+          participantIdentity: user.id,
+        }),
+      }
+    );
+
+    const { token, error: tokenError } = await res.json();
+
+    if (tokenError || !token) {
+      showToast("Error al iniciar la llamada");
+      setCallLoading(false);
+      return;
+    }
+
+    // 2. Insertar call_request
+    const { error: reqError } = await supabase
+      .from('call_requests')
+      .insert({
+        caller_id: user.id,
+        creator_id: girl.id,
+        room_name: roomName,
+        status: 'pending',
+      });
+
+    if (reqError) {
+      showToast("Error al contactar a la creadora");
+      setCallLoading(false);
+      return;
+    }
+
+    setCallRoom(roomName);
+    setCallToken(token);
+    setShowVC(true);
+
+  } catch (err) {
+    console.error(err);
+    showToast("Error de conexión");
+  } finally {
+    setCallLoading(false);
+  }
+};
+
+// ========function send=================
 
   const send = async () => {
 
@@ -704,26 +777,14 @@ console.log("RPC send_gift →", { data, error }); // 👈
   };
 
   if (showVC) {
-
     return (
       <VideoCall
-        creator={{
-          id: girl.id,
-          name: girl.name,
-          avatar: girl.img
-        }}
-
-        user={{
-          id: user.id,
-          name: user.display_name || 'Vos',
-          credits
-        }}
-
-        onEnd={() => {
-          setShowVC(false);
-        }}
-
+        creator={{ id: girl.id, name: girl.name, avatar: girl.img }}
+        user={{ id: user.id, name: user.display_name || 'Vos', credits }}
+        onEnd={() => { setShowVC(false); setCallToken(null); setCallRoom(null); }}
         theme="dark"
+        token={callToken}
+        roomName={callRoom}
       />
     );
   }
@@ -773,7 +834,8 @@ console.log("RPC send_gift →", { data, error }); // 👈
   </div>
 
   <button
-    onClick={() => setShowVC(true)}
+    onClick={startCall}
+    disabled={callLoading}
     className="bg-gradient-to-br from-[#c9a84c] to-[#f0d882] rounded-full py-2 px-4 text-[#09080f] text-sm font-semibold"
   >
     📹

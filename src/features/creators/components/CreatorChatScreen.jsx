@@ -1,3 +1,4 @@
+import CreatorVideoCall from './CreatorVideoCall';
 import { useState, useRef, useEffect } from 'react';
 import useAppStore from '../../../app/store/useAppStore';
 import { supabase } from '../../../services/api/supabase';
@@ -52,6 +53,9 @@ export default function CreatorChatScreen({ user, onBack }) {
   const [translateEnabled, setTranslateEnabled] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [storyUrl, setStoryUrl] = useState(null);
+  const [incomingCall, setIncomingCall] = useState(null); // { callerId, callerName, roomName, requestId }
+  const [callToken, setCallToken] = useState(null);
+  const [showVC, setShowVC] = useState(false);
   const bottomRef = useRef(null);
   const audioRef = useRef(null);
 
@@ -60,9 +64,19 @@ export default function CreatorChatScreen({ user, onBack }) {
   const userAvatar = user?.avatar_url || user?.avatar || null;
   const userName = user?.display_name || user?.name || 'Usuario';
 
-  const isExpired =
-    user?.video_created_at &&
-    Date.now() - new Date(user.video_created_at).getTime() > 24 * 60 * 60 * 1000;
+const [isExpired, setIsExpired] = useState(false);
+
+useEffect(() => {
+  const expired = user?.video_created_at
+    ? Date.now() - new Date(user.video_created_at).getTime() > 24 * 60 * 60 * 1000
+    : false;
+
+  const timer = setTimeout(() => {
+    setIsExpired(expired);
+  }, 0);
+
+  return () => clearTimeout(timer);
+}, [user?.video_created_at]);
 
   const hasStory = !!user?.video_url && !isExpired;
 
@@ -100,33 +114,59 @@ export default function CreatorChatScreen({ user, onBack }) {
       });
 
     const channel = supabase
-  .channel(`chat_${conversationId}`)
-  .on('postgres_changes', {
-    event: 'INSERT',
-    schema: 'public',
-    table: 'messages',
-    filter: `conversation_id=eq.${conversationId}`
-  }, async (payload) => {
-    const m = payload.new;
-    if (m.sender_id === creator.id) return; // ya lo agregamos optimistamente al enviar
+      .channel(`chat_${conversationId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `receiver_id=eq.${creator.id}`
+      }, async (payload) => {
+        const m = payload.new;
+        if (m.sender_id === creator.id) return; // ya lo agregamos optimistamente al enviar
 
-    let text = m.content;
-    if (translateEnabled) text = await fetchTranslation(m.content);
+        let text = m.content;
+        if (translateEnabled) text = await fetchTranslation(m.content);
 
-    const gift = parseGift(m.content);
-    if (gift) playGiftSound(gift);
+        const gift = parseGift(m.content);
+        if (gift) playGiftSound(gift);
 
-    setMessages(prev => {
-      if (prev.some(msg => msg.id === m.id)) return prev;
-      return [...prev, { id: m.id, who: 'them', text, time: nowTime(), gift }];
-    });
+        setMessages(prev => {
+          if (prev.some(msg => msg.id === m.id)) return prev;
+          return [...prev, { id: m.id, who: 'them', text, time: nowTime(), gift }];
+        });
 
-    setEarnings(e => e + 1);
-  })
-  .subscribe();
+        setEarnings(e => e + 1);
+      })
+      .subscribe();
 
     return () => supabase.removeChannel(channel);
   }, [creator?.id, user?.id, conversationId, translateEnabled]);
+
+  // Listener llamadas entrantes
+  useEffect(() => {
+    if (!creator?.id) return;
+
+    const callChannel = supabase
+      .channel(`calls_${creator.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'call_requests',
+        filter: `creator_id=eq.${creator.id}`,
+      }, (payload) => {
+        const req = payload.new;
+        if (req.status !== 'pending') return;
+        setIncomingCall({
+          callerId: req.caller_id,
+          callerName: user?.display_name || user?.name || 'Usuario',
+          roomName: req.room_name,
+          requestId: req.id,
+        });
+      })
+      .subscribe();
+
+    return () => supabase.removeChannel(callChannel);
+  }, [creator?.id, user?.display_name, user?.name]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -140,13 +180,64 @@ export default function CreatorChatScreen({ user, onBack }) {
     const tempId = Date.now();
     setMessages(m => [...m, { id: tempId, who: 'me', text, time: nowTime(), gift: null }]);
 
-    await supabase.from('messages').insert({
-      sender_id: creator.id,
-      receiver_id: user.id,
-      content: text,
-      is_read: false,
+    await supabase.rpc('send_message', {
+      p_receiver_id: user.id,
+      p_content: text,
     });
   };
+
+  const acceptCall = async () => {
+    if (!incomingCall) return;
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
+
+    const res = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/livekit-token`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          roomName: incomingCall.roomName,
+          participantName: creator?.display_name || 'Creadora',
+          participantIdentity: creator?.id,
+        }),
+      }
+    );
+
+    const { token } = await res.json();
+
+    await supabase
+      .from('call_requests')
+      .update({ status: 'accepted' })
+      .eq('id', incomingCall.requestId);
+
+    setCallToken(token);
+    setShowVC(true);
+  };
+
+  const rejectCall = async () => {
+    if (!incomingCall) return;
+    await supabase
+      .from('call_requests')
+      .update({ status: 'rejected' })
+      .eq('id', incomingCall.requestId);
+    setIncomingCall(null);
+  };
+
+  if (showVC) {
+    return (
+      <CreatorVideoCall
+        user={user}
+        token={callToken}
+        roomName={incomingCall?.roomName}
+        onEnd={() => { setShowVC(false); setCallToken(null);setIncomingCall(null); }}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen" style={{ background: '#fdf8fb', position: 'relative' }}>
@@ -191,6 +282,53 @@ export default function CreatorChatScreen({ user, onBack }) {
           >
             ✕
           </button>
+        </div>
+      )}
+
+      {/* LLAMADA ENTRANTE */}
+      {incomingCall && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(0,0,0,0.75)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #1a0830, #09080f)',
+            border: '1px solid rgba(244,114,182,.3)',
+            borderRadius: 24, padding: '32px 28px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16,
+            minWidth: 280,
+          }}>
+            <div style={{ fontSize: 64 }}>📹</div>
+            <div style={{ color: '#fff', fontSize: 18, fontWeight: 700, textAlign: 'center' }}>
+              Llamada entrante
+            </div>
+            <div style={{ color: 'rgba(255,255,255,.6)', fontSize: 14, textAlign: 'center' }}>
+              {incomingCall.callerName} te quiere llamar
+            </div>
+            <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
+              <button
+                onClick={rejectCall}
+                style={{
+                  width: 60, height: 60, borderRadius: '50%',
+                  background: '#ef4444', border: 'none',
+                  fontSize: 24, cursor: 'pointer',
+                }}
+              >
+                ❌
+              </button>
+              <button
+                onClick={acceptCall}
+                style={{
+                  width: 60, height: 60, borderRadius: '50%',
+                  background: '#22c55e', border: 'none',
+                  fontSize: 24, cursor: 'pointer',
+                }}
+              >
+                ✅
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

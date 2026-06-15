@@ -2,6 +2,8 @@
 import { useState, useEffect, useRef } from "react";
 import CallControls from "../../calls/components/CallControls";
 import MiniChat from "../../calls/components/MiniChat";
+import { LiveKitRoom, VideoConference } from "@livekit/components-react";
+import "@livekit/components-styles";
 
 const fmtTime = s =>
   `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
@@ -46,16 +48,17 @@ function IncomingGiftToast({ gift, onDone }) {
 export default function CreatorVideoCall({
   user    = { id: "mock_user_1", name: "Carlos" },
   onEnd,
+  token   = null,
+  roomName = null,
 }) {
-  const [secs, setSecs]           = useState(0);
-  const [status, setStatus]       = useState("connecting");
-  const [muted, setMuted]         = useState(false);
-  const [camOff, setCamOff]       = useState(false);
-  const [showChat, setShowChat]   = useState(false);
-  const [earnings, setEarnings]   = useState(0);
+  const [secs, setSecs]             = useState(0);
+  const [status, setStatus]         = useState("connecting");
+  const [muted, setMuted]           = useState(false);
+  const [camOff, setCamOff]         = useState(false);
+  const [showChat, setShowChat]     = useState(false);
+  const [earnings, setEarnings]     = useState(0);
   const [activeGift, setActiveGift] = useState(null);
 
-  // BACKEND: socket.on('gift_received', (gift) => { setActiveGift(gift); setEarnings(e => e + gift.cost * 0.45) })
   const _localVideoRef  = useRef(null);
   const _remoteVideoRef = useRef(null);
 
@@ -83,14 +86,27 @@ export default function CreatorVideoCall({
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col overflow-hidden">
 
-      {/* ── VIDEO REMOTO ── */}
+      {/* ── VIDEO REMOTO / LIVEKIT ── */}
       <div className="absolute inset-0">
-        <div
-          className="w-full h-full flex items-center justify-center"
-          style={{ background: "linear-gradient(135deg, #1a0830, #09080f)" }}
-        >
-          <span style={{ fontSize: 160, opacity: 0.15 }}>👤</span>
-        </div>
+        {token && roomName ? (
+          <LiveKitRoom
+            token={token}
+            serverUrl={import.meta.env.VITE_LIVEKIT_URL}
+            connect={true}
+            video={!camOff}
+            audio={!muted}
+            style={{ height: '100%' }}
+          >
+            <VideoConference />
+          </LiveKitRoom>
+        ) : (
+          <div
+            className="w-full h-full flex items-center justify-center"
+            style={{ background: "linear-gradient(135deg, #1a0830, #09080f)" }}
+          >
+            <span style={{ fontSize: 160, opacity: 0.15 }}>👤</span>
+          </div>
+        )}
       </div>
 
       {/* ── TOAST REGALO ENTRANTE ── */}
@@ -130,7 +146,7 @@ export default function CreatorVideoCall({
       </div>
 
       {/* ── ESTADO CONECTANDO ── */}
-      {status === "connecting" && (
+      {status === "connecting" && !token && (
         <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
           <div className="text-6xl mb-4">🌸</div>
           <div
@@ -190,7 +206,7 @@ export default function CreatorVideoCall({
 
       {/* ── MINI CHAT ── */}
       {showChat && (
-       <MiniChat theme="dark" onClose={() => setShowChat(false)} role="creator" />
+        <MiniChat theme="dark" onClose={() => setShowChat(false)} role="creator" />
       )}
 
       <style>{`

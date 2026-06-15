@@ -4,6 +4,7 @@ import { ROUTES } from '../../../constants/routes';
 import useAppStore from '../../../app/store/useAppStore';
 import { supabase } from '../../../services/api/supabase';
 import CreatorChatScreen from './CreatorChatScreen';
+import CreatorVideoCall from './CreatorVideoCall';
 import IDUpload from '../../verification/components/IDUpload';
 import VerificationStatus from '../../verification/components/VerificationStatus';
 import CreatorCard from '../../users/components/CreatorCard';
@@ -364,6 +365,9 @@ function VerificationLoading() {
   const [verifStatus, setVerifStatus] = useState(user?.verification_status ?? 'none');
   const [verifLoading, setVerifLoading] = useState(true);
   const [scrolled, setScrolled] = useState(false);
+   const [incomingCall, setIncomingCall] = useState(null);
+  const [callToken, setCallToken] = useState(null);
+  const [showVC, setShowVC] = useState(false);
   const scrollRef = useRef(null);
 
   const syncVerificationStatus = useCallback(async () => {
@@ -387,12 +391,82 @@ function VerificationLoading() {
   const handleUploaded = useCallback(async () => { await syncVerificationStatus(); }, [syncVerificationStatus]);
   const isBlocked = verifStatus !== 'approved';
 
+  // ── Listener global llamadas entrantes ──
+  useEffect(() => {
+    if (!user?.id) return;
+    const callChannel = supabase
+      .channel(`calls_global_${user.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'call_requests',
+        filter: `creator_id=eq.${user.id}`,
+      }, (payload) => {
+        const req = payload.new;
+        if (req.status !== 'pending') return;
+        setIncomingCall({ callerId: req.caller_id, roomName: req.room_name, requestId: req.id });
+      })
+      .subscribe();
+    return () => supabase.removeChannel(callChannel);
+  }, [user?.id]);
+
+  const acceptCall = async () => {
+    if (!incomingCall) return;
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
+    const res = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/livekit-token`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+        body: JSON.stringify({
+          roomName: incomingCall.roomName,
+          participantName: user?.display_name || 'Creadora',
+          participantIdentity: user?.id,
+        }),
+      }
+    );
+    const { token } = await res.json();
+    await supabase.from('call_requests').update({ status: 'accepted' }).eq('id', incomingCall.requestId);
+    setCallToken(token);
+    setShowVC(true);
+  };
+
+  const rejectCall = async () => {
+    if (!incomingCall) return;
+    await supabase.from('call_requests').update({ status: 'rejected' }).eq('id', incomingCall.requestId);
+    setIncomingCall(null);
+  };
+
   if (verifLoading) return <VerificationLoading />;
   if (isBlocked) return <VerificationGate status={verifStatus} onUploaded={handleUploaded} />;
   if (selectedUser) return <CreatorChatScreen user={selectedUser} onBack={() => setSelectedUser(null)} />;
+  if (showVC) return (
+    <CreatorVideoCall
+      user={{ id: incomingCall?.callerId, name: 'Usuario' }}
+      token={callToken}
+      roomName={incomingCall?.roomName}
+      onEnd={() => { setShowVC(false); setCallToken(null); setIncomingCall(null); }}
+    />
+  );
 
   return (
     <div className="w-full h-screen bg-[#fdf6f0] text-[#2a1a20] flex flex-col overflow-hidden">
+
+      {/* LLAMADA ENTRANTE GLOBAL */}
+      {incomingCall && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'linear-gradient(135deg, #1a0830, #09080f)', border: '1px solid rgba(244,114,182,.3)', borderRadius: 24, padding: '32px 28px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, minWidth: 280 }}>
+            <div style={{ fontSize: 64 }}>📹</div>
+            <div style={{ color: '#fff', fontSize: 18, fontWeight: 700, textAlign: 'center' }}>Llamada entrante</div>
+            <div style={{ color: 'rgba(255,255,255,.6)', fontSize: 14, textAlign: 'center' }}>Alguien te quiere llamar</div>
+            <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
+              <button onClick={rejectCall} style={{ width: 60, height: 60, borderRadius: '50%', background: '#ef4444', border: 'none', fontSize: 24, cursor: 'pointer' }}>❌</button>
+              <button onClick={acceptCall} style={{ width: 60, height: 60, borderRadius: '50%', background: '#22c55e', border: 'none', fontSize: 24, cursor: 'pointer' }}>✅</button>
+            </div>
+          </div>
+        </div>
+      )}
   <div
     className={`grid grid-cols-3 items-center py-3.5 px-5 shrink-0 transition-all duration-300 ${
       scrolled
@@ -502,7 +576,7 @@ function FHome({ onSelectUser }) {
   }, [user, conversations.length]);
 
   useEffect(() => {
-    loadStats();
+    loadStats(); // eslint-disable-line react-hooks/set-state-in-effect
     const interval = setInterval(loadStats, 30000);
     return () => clearInterval(interval);
   }, [loadStats]);
@@ -614,7 +688,7 @@ function FEarn() {
   const [stats, setStats] = useState({ balance: 0, gifts: 0, conversations: 0, admirers: 0 });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { loadStats(); }, [user?.id]);
+ useEffect(() => { loadStats(); }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadStats() {
     if (!user?.id) { setLoading(false); return; }
