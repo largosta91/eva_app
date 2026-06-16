@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import useAppStore from '../../../app/store/useAppStore';
-import VideoCall from '../../calls/components/VideoCall';
+import { lazy, Suspense } from 'react';
+
+const VideoCall = lazy(() => import('../../calls/components/VideoCall'));
 import GiftPanel from './GiftPanel';
 import { supabase } from '../../../services/api/supabase';
 import { StoryRing, StoryModal } from '../../creators/components/CreatorVideoStory';
@@ -478,19 +480,15 @@ export default function ChatScreen({ girl, onBack }) {
       .channel(`chat_${conversationId}`)
 
       .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `receiver_id=eq.${user.id}`
-        },
-
-        async (payload) => {
-
-          const m = payload.new;
-
-          if (m.sender_id !== girl.id) return;
+  'postgres_changes',
+  {
+    event: 'INSERT',
+    schema: 'public',
+    table: 'messages',
+  },
+  async (payload) => {
+    const m = payload.new;
+    if (m.sender_id !== girl.id || m.receiver_id !== user.id) return;
 
           let text = m.content;
 
@@ -777,17 +775,23 @@ console.log("RPC send_gift →", { data, error }); // 👈
   };
 
   if (showVC) {
-    return (
+  return (
+    <Suspense fallback={<div>Cargando videollamada...</div>}>
       <VideoCall
         creator={{ id: girl.id, name: girl.name, avatar: girl.img }}
         user={{ id: user.id, name: user.display_name || 'Vos', credits }}
-        onEnd={() => { setShowVC(false); setCallToken(null); setCallRoom(null); }}
+        onEnd={() => {
+          setShowVC(false);
+          setCallToken(null);
+          setCallRoom(null);
+        }}
         theme="dark"
         token={callToken}
         roomName={callRoom}
       />
-    );
-  }
+    </Suspense>
+  );
+}
 
   return (
     <div
