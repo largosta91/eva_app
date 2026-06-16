@@ -596,7 +596,7 @@ const startCall = async () => {
 
     setCallRoom(roomName);
     setCallToken(token);
-    setShowVC(true);
+    
 
   } catch (err) {
     console.error(err);
