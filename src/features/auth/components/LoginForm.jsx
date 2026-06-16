@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../../constants/routes';
 import useAppStore from '../../../app/store/useAppStore';
 import { supabase } from '../../../services/api/supabase';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
 export default function LoginForm() {
   const navigate = useNavigate();
@@ -10,6 +11,7 @@ export default function LoginForm() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // 👈 nuevo estado
 
   const handleChange = (e) => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
 
@@ -50,7 +52,7 @@ export default function LoginForm() {
       display_name: profile.display_name,
       role:         profile.role,
       avatar_url:   profile.avatar_url || null,
-      cover_url:    profile.cover_url || null, // 
+      cover_url:    profile.cover_url || null,
     });
 
     if (profile.role === 'creator') {
@@ -78,22 +80,50 @@ export default function LoginForm() {
         </div>
 
         <div className="flex flex-col gap-3">
-          <input name="email" type="email" placeholder="Email" value={form.email} onChange={handleChange}
-            className="w-full bg-[#1a1826] border border-[rgba(201,168,76,.2)] rounded-full py-3.5 px-5 text-[#ede8ff] text-sm outline-none placeholder:text-[#7a748f] focus:border-[#8b3a9c]" />
-          <input name="password" type="password" placeholder="Contraseña" value={form.password} onChange={handleChange}
-            className="w-full bg-[#1a1826] border border-[rgba(201,168,76,.2)] rounded-full py-3.5 px-5 text-[#ede8ff] text-sm outline-none placeholder:text-[#7a748f] focus:border-[#8b3a9c]" />
+          <input
+            name="email"
+            type="email"
+            placeholder="Email"
+            value={form.email}
+            onChange={handleChange}
+            className="w-full bg-[#1a1826] border border-[rgba(201,168,76,.2)] rounded-full py-3.5 px-5 text-[#ede8ff] text-sm outline-none placeholder:text-[#7a748f] focus:border-[#8b3a9c]"
+          />
+
+          <div className="relative w-full">
+            <input
+              name="password"
+              type={showPassword ? "text" : "password"}
+              placeholder="Contraseña"
+              value={form.password}
+              onChange={handleChange}
+              className="w-full bg-[#1a1826] border border-[rgba(201,168,76,.2)] rounded-full py-3.5 px-5 text-[#ede8ff] text-sm outline-none placeholder:text-[#7a748f] focus:border-[#8b3a9c]"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#c9a84c]"
+            >
+              {showPassword ? <FaEyeSlash /> : <FaEye />}
+            </button>
+          </div>
+
           {error && <p className="text-red-400 text-xs px-2">{error}</p>}
         </div>
 
-        <button onClick={handleLogin} disabled={loading}
-          className="w-full py-4 rounded-full font-semibold text-[15px] bg-gradient-to-r from-[#8b3a9c] to-[#c9a84c] border-none cursor-pointer shadow-[0_8px_30px_rgba(139,58,156,.3)] text-white disabled:opacity-60">
+        <button
+          onClick={handleLogin}
+          disabled={loading}
+          className="w-full py-4 rounded-full font-semibold text-[15px] bg-gradient-to-r from-[#8b3a9c] to-[#c9a84c] border-none cursor-pointer shadow-[0_8px_30px_rgba(139,58,156,.3)] text-white disabled:opacity-60"
+        >
           {loading ? 'Entrando...' : 'Entrar'}
         </button>
 
         <div className="text-center text-sm text-[#5a5470]">
           ¿No tenés cuenta?{' '}
-          <button onClick={() => navigate(ROUTES.REGISTER)}
-            className="text-[#c9a84c] bg-transparent border-none cursor-pointer text-sm p-0">
+          <button
+            onClick={() => navigate(ROUTES.REGISTER)}
+            className="text-[#c9a84c] bg-transparent border-none cursor-pointer text-sm p-0"
+          >
             Registrate
           </button>
         </div>

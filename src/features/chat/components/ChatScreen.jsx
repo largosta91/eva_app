@@ -428,10 +428,10 @@ export default function ChatScreen({ girl, onBack }) {
 
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
-  const [showVC, setShowVC] = useState(false);
   const [callToken, setCallToken] = useState(null);
   const [callRoom, setCallRoom] = useState(null);
   const [callLoading, setCallLoading] = useState(false);
+  const [callStatus, setCallStatus] = useState(null);
   const [showGifts, setShowGifts] = useState(false);
   const [translateEnabled, setTranslateEnabled] = useState(false);
   const [sendingGift, setSendingGift] = useState(false);
@@ -543,69 +543,67 @@ const startCall = async () => {
     showToast("Necesitás al menos 150 créditos para llamar");
     return;
   }
-
   if (callLoading) return;
   setCallLoading(true);
-
   const roomName = `call_${[user.id, girl.id].sort().join('_')}`;
-
   try {
-    // 1. Generar token LiveKit
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData?.session?.access_token;
-
-    const res = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/livekit-token`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          roomName,
-          participantName: user.display_name || 'Usuario',
-          participantIdentity: user.id,
-        }),
-      }
-    );
-
-    const { token, error: tokenError } = await res.json();
-
-    if (tokenError || !token) {
-      showToast("Error al iniciar la llamada");
-      setCallLoading(false);
-      return;
-    }
-
-    // 2. Insertar call_request
     const { error: reqError } = await supabase
       .from('call_requests')
-      .insert({
-        caller_id: user.id,
-        creator_id: girl.id,
-        room_name: roomName,
-        status: 'pending',
-      });
-
+      .insert({ caller_id: user.id, creator_id: girl.id, room_name: roomName, status: 'pending' });
     if (reqError) {
       showToast("Error al contactar a la creadora");
       setCallLoading(false);
       return;
     }
-
     setCallRoom(roomName);
-    setCallToken(token);
-    
-
+    setCallStatus('waiting');
   } catch (err) {
     console.error(err);
     showToast("Error de conexión");
-  } finally {
     setCallLoading(false);
   }
 };
 
+useEffect(() => {
+  if (callStatus !== 'waiting' || !user?.id) return;
+  const channel = supabase
+    .channel(`call_response_${user.id}`)
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'call_requests',
+      filter: `caller_id=eq.${user.id}`,
+    }, async (payload) => {
+      const req = payload.new;
+      if (req.status === 'accepted') {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData?.session?.access_token;
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/livekit-token`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+            body: JSON.stringify({
+              roomName: callRoom,
+              participantName: user.display_name || 'Usuario',
+              participantIdentity: user.id,
+            }),
+          }
+        );
+        const { token } = await res.json();
+        setCallToken(token);
+        setCallStatus('active');
+        setCallLoading(false);
+      } else if (req.status === 'rejected') {
+        showToast("La creadora no está disponible");
+        setCallStatus(null);
+        setCallRoom(null);
+        setCallLoading(false);
+      }
+    })
+    .subscribe();
+  return () => supabase.removeChannel(channel);
+}, [callStatus, user?.id, callRoom]);// eslint-disable-line react-hooks/exhaustive-deps
 // ========function send=================
 
   const send = async () => {
@@ -774,14 +772,43 @@ console.log("RPC send_gift →", { data, error }); // 👈
     
   };
 
-  if (showVC) {
+  if (callStatus === 'waiting') {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: '#09080f',
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', zIndex: 100,
+    }}>
+      <div style={{ fontSize: 60 }}>📞</div>
+      <p style={{ color: '#fff', marginTop: 16, fontSize: 18 }}>
+        Llamando a {girl?.display_name || girl?.name}...
+      </p>
+      <button onClick={async () => {
+        await supabase.from('call_requests')
+          .update({ status: 'cancelled' })
+          .eq('caller_id', user.id)
+          .eq('status', 'pending');
+        setCallStatus(null);
+        setCallRoom(null);
+        setCallLoading(false);
+      }} style={{
+        marginTop: 24, padding: '10px 24px', borderRadius: 20,
+        background: '#ef4444', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 16,
+      }}>
+        Cancelar
+      </button>
+    </div>
+  );
+}
+
+if (callStatus === 'active' && callToken) {
   return (
     <Suspense fallback={<div>Cargando videollamada...</div>}>
       <VideoCall
         creator={{ id: girl.id, name: girl.name, avatar: girl.img }}
         user={{ id: user.id, name: user.display_name || 'Vos', credits }}
         onEnd={() => {
-          setShowVC(false);
+          setCallStatus(null);
           setCallToken(null);
           setCallRoom(null);
         }}
