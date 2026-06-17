@@ -113,9 +113,8 @@ export default function LoginForm() {
       <circle cx="12" cy="12" r="3" />
     </svg>
   )}
-</button>
-
-
+</button> 
+          </div>
           {error && <p className="text-red-400 text-xs px-2">{error}</p>}
         </div>
 

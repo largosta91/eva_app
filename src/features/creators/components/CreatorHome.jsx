@@ -78,7 +78,7 @@ function useConversations(creatorId) {
 
     const { data, error } = await supabase
       .from('messages')
-      .select('sender_id, receiver_id, content, created_at')
+      .select('sender_id, receiver_id, content, created_at, is_read')
       .or(`sender_id.eq.${creatorId},receiver_id.eq.${creatorId}`)
       .order('created_at', { ascending: false });
 
@@ -111,13 +111,18 @@ function useConversations(creatorId) {
         name: userMap[id]?.name ?? 'Usuario',
         avatar: userMap[id]?.avatar || null,
         video_url: userMap[id]?.video_url || null,
-        preview: seen.get(id).content
+        preview: seen.get(id).content,
+        unread: data.filter(m =>
+          m.receiver_id === creatorId &&
+          m.sender_id === id &&
+          m.is_read === false
+        ).length,
       }))
     );
   }, [creatorId]);
 
   useEffect(() => {
-    load();
+    load(); // eslint-disable-line react-hooks/set-state-in-effect
     const interval = setInterval(load, 5000);
     return () => clearInterval(interval);
   }, [load]);
@@ -649,7 +654,24 @@ function FHome({ onSelectUser }) {
                   {u.preview}
                 </div>
               </div>
-              <div className="text-[#c4607a] text-lg">›</div>
+              {u.unread > 0 && (
+  <div style={{
+    background: '#c4607a',
+    color: '#fff',
+    borderRadius: '999px',
+    minWidth: 20,
+    height: 20,
+    fontSize: 11,
+    fontWeight: 700,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '0 6px',
+  }}>
+    {u.unread}
+  </div>
+)}
+{!u.unread && <div className="text-[#c4607a] text-lg">›</div>}
             </div>
           ))
         )}
