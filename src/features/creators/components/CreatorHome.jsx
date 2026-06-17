@@ -83,6 +83,8 @@ function useConversations(creatorId) {
       .order('created_at', { ascending: false });
 
     if (!data || error) return;
+    // ─── console.log temporal para verificar los mensajes recibidos y enviados
+    console.log('messages data:', data.slice(0, 3));
 
     const seen = new Map();
     for (const m of data) {
