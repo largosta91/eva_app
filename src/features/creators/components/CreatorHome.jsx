@@ -636,7 +636,6 @@ function FHome({ onSelectUser }) {
           Chats recientes
         </div>
 
-{console.log('conversations con unread:', conversations.map(u => ({ id: u.id, unread: u.unread })))}
         {conversations.length === 0 ? (
           <div className="text-center text-[#9a7a84] py-10 bg-white/30 rounded-3xl border border-dashed border-pink-200 text-sm italic">
             No hay mensajes aún
@@ -663,7 +662,7 @@ function FHome({ onSelectUser }) {
               </div>
               
               {u.unread ? (
-                <div className="w-2.5 h-2.5 rounded-full bg-[#c4607a] shrink-0" />
+                <div className="w-2.5 h-2.5 rounded-full bg-[#22c55e] shrink-0" />
               ) : (
                 <div className="text-[#c4607a] text-lg">›</div>
               )}
