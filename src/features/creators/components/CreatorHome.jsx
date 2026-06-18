@@ -83,8 +83,6 @@ function useConversations(creatorId) {
       .order('created_at', { ascending: false });
 
     if (!data || error) return;
-    // ─── console.log temporal para verificar los mensajes recibidos y enviados
-    console.log('messages data:', data.slice(0, 3));
 
     const seen = new Map();
     for (const m of data) {
@@ -114,11 +112,11 @@ function useConversations(creatorId) {
         avatar: userMap[id]?.avatar || null,
         video_url: userMap[id]?.video_url || null,
         preview: seen.get(id).content,
-        unread: data.filter(m =>
+        unread: data.some(m =>
           m.receiver_id === creatorId &&
           m.sender_id === id &&
           m.is_read === false
-        ).length,
+        ),
       }))
     );
   }, [creatorId]);
@@ -652,28 +650,17 @@ function FHome({ onSelectUser }) {
                 <div className="font-medium text-[15px] mb-0.5 text-[#2a1a20]">
                   {u.name}
                 </div>
-                <div className="text-xs text-[#9a7a84] truncate">
+                <div className={`text-xs truncate ${u.unread ? 'text-[#2a1a20] font-semibold' : 'text-[#9a7a84]'}`}>
                   {u.preview}
                 </div>
               </div>
-              {u.unread > 0 && (
-  <div style={{
-    background: '#c4607a',
-    color: '#fff',
-    borderRadius: '999px',
-    minWidth: 20,
-    height: 20,
-    fontSize: 11,
-    fontWeight: 700,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '0 6px',
-  }}>
-    {u.unread}
-  </div>
-)}
-{!u.unread && <div className="text-[#c4607a] text-lg">›</div>}
+              
+              {u.unread ? (
+                <div className="w-2.5 h-2.5 rounded-full bg-[#c4607a] shrink-0" />
+              ) : (
+                <div className="text-[#c4607a] text-lg">›</div>
+              )}
+              
             </div>
           ))
         )}
