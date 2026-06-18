@@ -252,7 +252,7 @@ export default function CreatorVideoCall({
 
       {/* ── MINI CHAT ── */}
       {showChat && (
-        <MiniChat theme="dark" onClose={() => setShowChat(false)} role="creator" />
+        <MiniChat theme="dark" onClose={() => setShowChat(false)} role="creator" roomName={roomName} userId={user.id} />
       )}
 
       <style>{`

@@ -538,15 +538,17 @@ export default function VideoCall({
         />
       )}
 
-      {showChat && (
-        <MiniChat
-          theme={theme}
-          onClose={() => setShowChat(false)}
-          creator={creator}
-          credits={credits}
-          onCreditsUpdate={setCredits}
-        />
-      )}
+    {showChat && (
+  <MiniChat
+    theme={theme}
+    onClose={() => setShowChat(false)}
+    creator={creator}
+    credits={credits}
+    onCreditsUpdate={setCredits}
+    roomName={roomName}
+    userId={user.id}
+  />
+)}
 
     </div>
   );
