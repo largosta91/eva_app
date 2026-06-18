@@ -104,11 +104,6 @@ function useConversations(creatorId) {
       avatar: u.avatar_url,
       video_url: u.video_url || null,
     }]));
-//console log para debug: muestra cada conversación con su estado de leído/no leído
-console.log('unread check:', ids.map(id => ({
-  id,
-  unread: data.some(m => m.receiver_id === creatorId && m.sender_id === id && m.is_read === false)
-})));
 
 
     setConversations(
@@ -118,11 +113,11 @@ console.log('unread check:', ids.map(id => ({
         avatar: userMap[id]?.avatar || null,
         video_url: userMap[id]?.video_url || null,
         preview: seen.get(id).content,
-        unread: data.some(m =>
+      unread: data.some(m =>
           m.receiver_id === creatorId &&
           m.sender_id === id &&
-          m.is_read === false
-        ),
+          !m.is_read
+          ),
       }))
     );
   }, [creatorId]);
