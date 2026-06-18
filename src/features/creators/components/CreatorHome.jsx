@@ -104,6 +104,12 @@ function useConversations(creatorId) {
       avatar: u.avatar_url,
       video_url: u.video_url || null,
     }]));
+//console log para debug: muestra cada conversación con su estado de leído/no leído
+console.log('unread check:', ids.map(id => ({
+  id,
+  unread: data.some(m => m.receiver_id === creatorId && m.sender_id === id && m.is_read === false)
+})));
+
 
     setConversations(
       ids.map(id => ({
@@ -630,6 +636,7 @@ function FHome({ onSelectUser }) {
           Chats recientes
         </div>
 
+{console.log('conversations con unread:', conversations.map(u => ({ id: u.id, unread: u.unread })))}
         {conversations.length === 0 ? (
           <div className="text-center text-[#9a7a84] py-10 bg-white/30 rounded-3xl border border-dashed border-pink-200 text-sm italic">
             No hay mensajes aún
