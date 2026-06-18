@@ -2,7 +2,13 @@
 import { useState, useEffect, useRef } from "react";
 import CallControls from "../../calls/components/CallControls";
 import MiniChat from "../../calls/components/MiniChat";
-import { LiveKitRoom, VideoConference } from "@livekit/components-react";
+import {
+  LiveKitRoom,
+  useTracks,
+  VideoTrack,
+  useLocalParticipant,
+} from "@livekit/components-react";
+import { Track } from "livekit-client";
 import "@livekit/components-styles";
 
 const fmtTime = s =>
@@ -44,6 +50,61 @@ function IncomingGiftToast({ gift, onDone }) {
     </div>
   );
 }
+
+function CreatorCallLayout({ camOff }) {
+  const [swapped, setSwapped] = useState(false);
+  const tracks = useTracks([Track.Source.Camera], { onlySubscribed: true });
+  const { localParticipant } = useLocalParticipant();
+
+  const remoteTracks = tracks.filter(
+    t => t.participant.identity !== localParticipant?.identity
+  );
+  const localTrack = tracks.find(
+    t => t.participant.identity === localParticipant?.identity
+  );
+
+  const mainTrack  = swapped ? localTrack      : remoteTracks[0];
+  const thumbTrack = swapped ? remoteTracks[0] : localTrack;
+
+  return (
+    <div style={{ position: 'absolute', inset: 0, background: '#000' }}>
+      {mainTrack ? (
+        <VideoTrack
+          trackRef={mainTrack}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+      ) : (
+        <div style={{
+          width: '100%', height: '100%',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'linear-gradient(135deg, #1a0830, #09080f)'
+        }}>
+          <span style={{ fontSize: 80, opacity: 0.2 }}>🌸</span>
+        </div>
+      )}
+
+      {thumbTrack && (!camOff || swapped) && (
+        <div
+          onClick={() => setSwapped(s => !s)}
+          style={{
+            position: 'absolute', bottom: 140, right: 16,
+            width: 100, height: 140,
+            borderRadius: 16, overflow: 'hidden',
+            border: '2px solid rgba(244,114,182,.3)',
+            zIndex: 20,
+            cursor: 'pointer',
+          }}
+        >
+          <VideoTrack
+            trackRef={thumbTrack}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 export default function CreatorVideoCall({
   user    = { id: "mock_user_1", name: "Carlos" },
@@ -88,26 +149,26 @@ export default function CreatorVideoCall({
 
       {/* ── VIDEO REMOTO / LIVEKIT ── */}
       <div className="absolute inset-0">
-        {token && roomName ? (
-          <LiveKitRoom
-            token={token}
-            serverUrl={import.meta.env.VITE_LIVEKIT_URL}
-            connect={true}
-            video={!camOff}
-            audio={!muted}
-            style={{ height: '100%' }}
-          >
-            <VideoConference />
-          </LiveKitRoom>
-        ) : (
-          <div
-            className="w-full h-full flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, #1a0830, #09080f)" }}
-          >
-            <span style={{ fontSize: 160, opacity: 0.15 }}>👤</span>
-          </div>
-        )}
-      </div>
+  {token && roomName ? (
+    <LiveKitRoom
+      token={token}
+      serverUrl={import.meta.env.VITE_LIVEKIT_URL}
+      connect={true}
+      video={!camOff}
+      audio={!muted}
+      style={{ height: '100%', position: 'absolute', inset: 0 }}
+    >
+      <CreatorCallLayout camOff={camOff} />
+    </LiveKitRoom>
+  ) : (
+    <div
+      className="w-full h-full flex items-center justify-center"
+      style={{ background: "linear-gradient(135deg, #1a0830, #09080f)" }}
+    >
+      <span style={{ fontSize: 160, opacity: 0.15 }}>👤</span>
+    </div>
+  )}
+</div>
 
       {/* ── TOAST REGALO ENTRANTE ── */}
       {activeGift && (
@@ -158,21 +219,6 @@ export default function CreatorVideoCall({
           <div className="text-white/60 text-sm">Conectando...</div>
         </div>
       )}
-
-      {/* ── VIDEO LOCAL ── */}
-      <div
-        className="absolute z-20 rounded-2xl overflow-hidden flex items-center justify-center"
-        style={{
-          bottom: 140, right: 16,
-          width: 100, height: 140,
-          background: "#1a1826",
-          border: "2px solid rgba(244,114,182,.3)",
-        }}
-      >
-        <span style={{ fontSize: 40, filter: camOff ? "grayscale(1) opacity(.3)" : "none" }}>
-          {camOff ? "🚫" : "🤳"}
-        </span>
-      </div>
 
       {/* ── BOTÓN MINI CHAT ── */}
       <div className="absolute z-20" style={{ bottom: 120, left: 20 }}>
