@@ -260,7 +260,7 @@ const fetchTranslation = async (text) => {
 };
 
 // ── MiniChat ──────────────────────────────────────────────────────────────────
-export default function MiniChat({ theme = "dark", onClose, role = "user", creator, credits, onCreditsUpdate }) {
+export default function MiniChat({ theme = "dark", onClose, role = "user", creator, credits, onCreditsUpdate, roomName, userId }) {
   const [messages, setMessages]           = useState([]);
   const [text, setText]                   = useState("");
   const [showGiftPanel, setShowGiftPanel] = useState(false);
