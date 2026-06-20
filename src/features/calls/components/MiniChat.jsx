@@ -267,7 +267,6 @@ export default function MiniChat({ theme = "dark", onClose, role = "user", creat
   const [activeGift, setActiveGift]       = useState(null);
   const [sending, setSending]             = useState(false);
   const [translateEnabled, setTranslateEnabled] = useState(false);
-  const btnStyle = { background: "none", border: "none", color: "#c9a84c", cursor: "pointer", fontSize: "16px" };
 
   const bottomRef    = useRef(null);
   const translateRef = useRef(translateEnabled);
@@ -460,6 +459,7 @@ export default function MiniChat({ theme = "dark", onClose, role = "user", creat
     </>
   );
 }
+
 
 
 
