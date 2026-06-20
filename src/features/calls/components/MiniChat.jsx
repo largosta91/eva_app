@@ -264,9 +264,10 @@ export default function MiniChat({ theme = "dark", onClose, role = "user", creat
   const [messages, setMessages]           = useState([]);
   const [text, setText]                   = useState("");
   const [showGiftPanel, setShowGiftPanel] = useState(false);
-  const [translateEnabled, setTranslateEnabled] = useState(false);
   const [activeGift, setActiveGift]       = useState(null);
   const [sending, setSending]             = useState(false);
+  const [translateEnabled, setTranslateEnabled] = useState(false);
+  const btnStyle = { background: "none", border: "none", color: "#c9a84c", cursor: "pointer", fontSize: "16px" };
 
   const bottomRef    = useRef(null);
   const translateRef = useRef(translateEnabled);
@@ -276,15 +277,13 @@ export default function MiniChat({ theme = "dark", onClose, role = "user", creat
 
   const handleSend = async () => {
     const currentInput = text.trim();
-    if (!currentInput) return;
-    setMessages(prev => [...prev, { id: Date.now(), text: currentInput, sender: "me" }]);
+    if (!currentInput || !roomName) return;
+    const msg = { id: Date.now(), text: currentInput, sender_id: userId };
+    setMessages(prev => [...prev, { id: msg.id, text: msg.text, sender: "me" }]);
     setText("");
-    setTimeout(async () => {
-      const aiResponse = "I am so glad you are here!";
-      let finalMsg = aiResponse;
-      if (translateRef.current) finalMsg = await fetchTranslation(aiResponse);
-      setMessages(prev => [...prev, { id: Date.now() + 1, text: finalMsg, sender: "them" }]);
-    }, 1000);
+    await channelRef.current?.send({
+      type: "broadcast", event: "chat_message", payload: msg,
+    });
   };
 
   const handleKeyDown = (e) => { if (e.key === "Enter") handleSend(); };
@@ -461,3 +460,7 @@ export default function MiniChat({ theme = "dark", onClose, role = "user", creat
     </>
   );
 }
+
+
+
+
