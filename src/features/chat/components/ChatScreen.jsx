@@ -822,7 +822,7 @@ if (callStatus === 'active' && callToken) {
 
   return (
     <div
-      className="flex flex-col bg-[#09080f]" style={{ height: 'var(--app-height)' }}
+      className="flex flex-col h-screen bg-[#09080f]"
       style={{ position: 'relative' }}
     >
 
