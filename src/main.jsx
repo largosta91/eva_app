@@ -3,12 +3,20 @@ import { createRoot } from 'react-dom/client'
 import './styles/index.css'
 import App from './app/App.jsx'
 
+// 📐 FIX VIEWPORT HEIGHT - Android gesture navigation
+const setAppHeight = () => {
+  document.documentElement.style.setProperty(
+    '--app-height',
+    `${window.innerHeight}px`
+  );
+};
+window.addEventListener('resize', setAppHeight);
+setAppHeight();
+
 // 🔐 CANDADO DE SEGURIDAD GRATUITO
-// Al entrar al link, saltará un cartel pidiendo la clave.
 const password = prompt("Ingresá la clave secreta para acceder a Eva App:");
 
-if (password !== "sheilamividateamo") { // <-- CAMBIA ACÁ tu contraseña secreta
-  // Si la clave está mal, borramos la pantalla y mostramos este diseño oscuro
+if (password !== "sheilamividateamo") {
   document.body.innerHTML = `
     <div style="
       display: flex; 
@@ -41,11 +49,9 @@ if (password !== "sheilamividateamo") { // <-- CAMBIA ACÁ tu contraseña secret
       </div>
     </div>
   `;
-  // Clavamos el freno de mano definitivo para que React no procese nada por detrás
   throw new Error("Acceso denegado: Contraseña incorrecta.");
 }
 
-// Si la clave es correcta, saltea el bloqueo y arranca la app normal:
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />

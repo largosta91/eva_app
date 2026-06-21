@@ -822,7 +822,7 @@ if (callStatus === 'active' && callToken) {
 
   return (
     <div
-      className="flex flex-col h-screen bg-[#09080f]"
+      className="flex flex-col bg-[#09080f]" style={{ height: 'var(--app-height)' }}
       style={{ position: 'relative' }}
     >
 
@@ -842,7 +842,8 @@ if (callStatus === 'active' && callToken) {
       {/* HEADER */}
 
 
-<div className="flex items-center gap-3 py-3.5 px-4 bg-[#111018] border-b border-[rgba(201,168,76,.14)] shrink-0">
+<div className="flex items-center gap-3 px-4 bg-[#111018] border-b border-[rgba(201,168,76,.14)] shrink-0"
+style={{ paddingTop: 'calc(14px + env(safe-area-inset-top, 0px))', paddingBottom: '14px' }}>
 
   <button onClick={onBack} className="text-[#ede8ff] text-2xl">←</button>
 
