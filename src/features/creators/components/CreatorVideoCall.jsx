@@ -53,9 +53,7 @@ function IncomingGiftToast({ gift, onDone }) {
 
 function CreatorCallLayout({ camOff }) {
   const [swapped, setSwapped] = useState(false);
-  const tracks = useTracks([Track.Source.Camera], { onlySubscribed: false }).filter(
-  t => t.publication?.isSubscribed !== false
-);
+  const tracks = useTracks([Track.Source.Camera], { onlySubscribed: true });
   const { localParticipant } = useLocalParticipant();
 
  const remoteTracks = tracks.filter(
