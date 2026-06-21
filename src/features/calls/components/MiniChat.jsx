@@ -271,6 +271,20 @@ export default function MiniChat({ theme = "dark", onClose, role = "user", creat
   const bottomRef    = useRef(null);
   const translateRef = useRef(translateEnabled);
 
+  const channelRef = useRef(null);
+  useEffect(() => {
+    if (!roomName) return;
+    const ch = supabase.channel(`call:${roomName}`)
+      .on('broadcast', { event: 'chat_message' }, async ({ payload }) => {
+        if (payload.sender_id === userId) return;
+        let msgText = payload.text;
+        if (translateRef.current) msgText = await fetchTranslation(payload.text);
+        setMessages(prev => [...prev, { id: payload.id, text: msgText, sender: 'them' }]);
+      })
+      .subscribe();
+    channelRef.current = ch;
+    return () => { supabase.removeChannel(ch); };
+  }, [roomName]);
   useEffect(() => { translateRef.current = translateEnabled; }, [translateEnabled]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
@@ -459,6 +473,7 @@ export default function MiniChat({ theme = "dark", onClose, role = "user", creat
     </>
   );
 }
+
 
 
 
