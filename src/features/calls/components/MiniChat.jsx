@@ -273,19 +273,19 @@ export default function MiniChat({ theme = "dark", onClose, role = "user", creat
 
   const channelRef = useRef(null);
   useEffect(() => {
+    console.log("[MiniChat] suscribiendo canal, roomName:", roomName, "userId:", userId);
     if (!roomName) return;
     const ch = supabase.channel(`call:${roomName}`)
-      .on('broadcast', { event: 'chat_message' }, async ({ payload }) => {
+      .on("broadcast", { event: "chat_message" }, async ({ payload }) => {
         if (payload.sender_id === userId) return;
         let msgText = payload.text;
         if (translateRef.current) msgText = await fetchTranslation(payload.text);
-        setMessages(prev => [...prev, { id: payload.id, text: msgText, sender: 'them' }]);
+        setMessages(prev => [...prev, { id: payload.id, text: msgText, sender: "them" }]);
       })
       .subscribe();
     channelRef.current = ch;
     return () => { supabase.removeChannel(ch); };
   }, [roomName]);
-  useEffect(() => { translateRef.current = translateEnabled; }, [translateEnabled]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
   const handleSend = async () => {
