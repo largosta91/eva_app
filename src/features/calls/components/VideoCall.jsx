@@ -113,12 +113,14 @@ function CallLayout({ camOff }) {
   const tracks = useTracks([Track.Source.Camera], { onlySubscribed: false });
   const { localParticipant } = useLocalParticipant();
 
-  const remoteTracks = tracks.filter(
-    t => t.participant.identity !== localParticipant?.identity
-  );
+const remoteTracks = tracks.filter(
+  t => t.participant.identity !== localParticipant?.identity
+    && t.publication?.track != null
+);
 const localTrack = tracks.find(
-    t => t.participant.identity === localParticipant?.identity
-  );
+  t => t.participant.identity === localParticipant?.identity
+    && t.publication?.track != null
+);
 
   const mainTrack  = swapped ? localTrack      : remoteTracks[0];
   const thumbTrack = swapped ? remoteTracks[0] : localTrack;

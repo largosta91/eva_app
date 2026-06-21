@@ -53,15 +53,19 @@ function IncomingGiftToast({ gift, onDone }) {
 
 function CreatorCallLayout({ camOff }) {
   const [swapped, setSwapped] = useState(false);
-  const tracks = useTracks([Track.Source.Camera], { onlySubscribed: false });
+  const tracks = useTracks([Track.Source.Camera], { onlySubscribed: false }).filter(
+  t => t.publication?.isSubscribed !== false
+);
   const { localParticipant } = useLocalParticipant();
 
-  const remoteTracks = tracks.filter(
-    t => t.participant.identity !== localParticipant?.identity
-  );
-  const localTrack = tracks.find(
-    t => t.participant.identity === localParticipant?.identity
-  );
+ const remoteTracks = tracks.filter(
+  t => t.participant.identity !== localParticipant?.identity
+    && t.publication?.track != null
+);
+const localTrack = tracks.find(
+  t => t.participant.identity === localParticipant?.identity
+    && t.publication?.track != null
+);
 
   const mainTrack  = swapped ? localTrack      : remoteTracks[0];
   const thumbTrack = swapped ? remoteTracks[0] : localTrack;
