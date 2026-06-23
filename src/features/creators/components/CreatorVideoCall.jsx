@@ -135,6 +135,13 @@ export default function CreatorVideoCall({
   const [showChat, setShowChat]     = useState(false);
   const [earnings, setEarnings]     = useState(0);
   const [activeGift, setActiveGift] = useState(null);
+  const [creatorId, setCreatorId]   = useState(null);
+
+useEffect(() => {
+  supabase.auth.getUser().then(({ data }) => {
+    setCreatorId(data?.user?.id ?? null);
+  });
+}, []);
 
   const _localVideoRef  = useRef(null);
   const _remoteVideoRef = useRef(null);
@@ -303,7 +310,7 @@ useEffect(() => {
 
       {/* ── MINI CHAT ── */}
       {showChat && (
-        <MiniChat theme="dark" onClose={() => setShowChat(false)} role="creator" roomName={roomName} userId={user.id} />
+        <MiniChat theme="dark" onClose={() => setShowChat(false)} role="creator" roomName={roomName} userId={creatorId} />
       )}
 
       <style>{`
