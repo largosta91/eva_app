@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import CallControls from "../../calls/components/CallControls";
 import MiniChat from "../../calls/components/MiniChat";
+import { supabase } from "../../../services/api/supabase";
 import {
   LiveKitRoom,
   useTracks,
@@ -141,10 +142,45 @@ export default function CreatorVideoCall({
     return () => clearTimeout(t);
   }, []);
 
-  const handleEnd = () => {
-    setStatus("ended");
-    onEnd?.();
-  };
+
+// ── Finalizar llamada ──
+const handleEnd = async () => {
+  setStatus("ended");
+  if (roomName) {
+    await supabase
+      .from("call_requests")
+      .update({ status: "ended" })
+      .eq("room_name", roomName)
+      .eq("status", "accepted");
+  }
+  onEnd?.();
+};
+
+// ── Escuchar si el user cuelga ──
+useEffect(() => {
+  if (!roomName) return;
+
+  const channel = supabase
+    .channel(`call-end:${roomName}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "call_requests",
+        filter: `room_name=eq.${roomName}`,
+      },
+      (payload) => {
+        if (payload.new.status === "ended") {
+          setStatus("ended");
+          onEnd?.();
+        }
+      }
+    )
+    .subscribe();
+
+  return () => supabase.removeChannel(channel);
+}, [roomName, onEnd]);
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col overflow-hidden">

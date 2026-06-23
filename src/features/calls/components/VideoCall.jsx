@@ -400,10 +400,43 @@ export default function VideoCall({
   };
 
   // ── Finalizar llamada ──
-  const handleEnd = () => {
-    setStatus("ended");
-    onEnd?.();
-  };
+const handleEnd = async () => {
+  setStatus("ended");
+  if (roomName) {
+    await supabase
+      .from("call_requests")
+      .update({ status: "ended" })
+      .eq("room_name", roomName)
+      .eq("status", "accepted"); // solo actualiza si estaba activa
+  }
+  onEnd?.();
+};
+
+// ── Escuchar si la creadora cuelga ──
+useEffect(() => {
+  if (!roomName) return;
+
+  const channel = supabase
+    .channel(`call-end:${roomName}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "call_requests",
+        filter: `room_name=eq.${roomName}`,
+      },
+      (payload) => {
+        if (payload.new.status === "ended") {
+          setStatus("ended");
+          onEnd?.();
+        }
+      }
+    )
+    .subscribe();
+
+  return () => supabase.removeChannel(channel);
+}, [roomName, onEnd]);
 
 //----------------------------------------------------------------------------------//
 
