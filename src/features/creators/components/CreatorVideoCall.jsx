@@ -52,55 +52,68 @@ function IncomingGiftToast({ gift, onDone }) {
   );
 }
 
+
 function CreatorCallLayout({ camOff }) {
   const [swapped, setSwapped] = useState(false);
-  const tracks = useTracks([Track.Source.Camera], { onlySubscribed: true });
+  
+  // 1. Sin onlySubscribed para evitar retrasos y parpadeos en la red
+  const tracks = useTracks([Track.Source.Camera]); 
   const { localParticipant } = useLocalParticipant();
 
- const remoteTracks = tracks.filter(
-  t => t.participant.identity !== localParticipant?.identity
-    && t.publication?.track != null
-);
-const localTrack = tracks.find(
-  t => t.participant.identity === localParticipant?.identity
-    && t.publication?.track != null
-);
+  // 2. Buscamos de forma segura un solo track (como en el Bloque 2)
+  const remoteTrack = tracks.find(
+    t => t.participant.identity !== localParticipant?.identity && t.publication?.track != null
+  ) ?? null;
 
-  const mainTrack  = swapped ? localTrack      : remoteTracks[0];
-  const thumbTrack = swapped ? remoteTracks[0] : localTrack;
+  const localTrack = tracks.find(
+    t => t.participant.identity === localParticipant?.identity && t.publication?.track != null
+  ) ?? null;
+
+  // 3. Verificamos si ambas cámaras están activas
+  const canSwap = Boolean(localTrack && remoteTrack);
+
+  // 4. LA MAGIA: En lugar de un useEffect que borra tu estado, 
+  // simplemente ignoramos el estado "swapped" si falta una cámara.
+  // Cuando la cámara vuelva, el estado se recuperará automáticamente.
+  const isActuallySwapped = swapped && canSwap;
+
+  const mainTrack = isActuallySwapped ? localTrack : remoteTrack;
+  const thumbTrack = isActuallySwapped ? remoteTrack : localTrack;
 
   return (
-    <div style={{ position: 'absolute', inset: 0, background: '#000' }}>
+    <div style={{ position: "absolute", inset: 0, background: "#000" }}>
+      {/* Pista Principal */}
       {mainTrack ? (
         <VideoTrack
           trackRef={mainTrack}
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
         />
       ) : (
-        <div style={{
-          width: '100%', height: '100%',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'linear-gradient(135deg, #1a0830, #09080f)'
-        }}>
+        <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <span style={{ fontSize: 80, opacity: 0.2 }}>🌸</span>
         </div>
       )}
 
-      {thumbTrack && (!camOff || swapped) && (
+      {/* Pista Miniatura (Solo se muestra si canSwap es true) */}
+      {canSwap && thumbTrack && (
         <div
           onClick={() => setSwapped(s => !s)}
           style={{
-            position: 'absolute', bottom: 140, right: 16,
-            width: 100, height: 140,
-            borderRadius: 16, overflow: 'hidden',
-            border: '2px solid rgba(244,114,182,.3)',
+            position: "absolute",
+            bottom: 140,
+            right: 16,
+            width: 100,
+            height: 140,
+            borderRadius: 16,
+            overflow: "hidden",
+            border: "2px solid rgba(244,114,182,.3)",
             zIndex: 20,
-            cursor: 'pointer',
+            cursor: "pointer",
           }}
         >
           <VideoTrack
             trackRef={thumbTrack}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
           />
         </div>
       )}

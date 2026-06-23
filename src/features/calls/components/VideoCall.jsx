@@ -110,24 +110,31 @@ function GiftMedia({ src, alt, style }) {
 
 function CallLayout({ camOff }) {
   const [swapped, setSwapped] = useState(false);
-  const tracks = useTracks([Track.Source.Camera], { onlySubscribed: true });
+  
+  // 1. Quitamos onlySubscribed para mayor velocidad y estabilidad
+  const tracks = useTracks([Track.Source.Camera]); 
   const { localParticipant } = useLocalParticipant();
 
-const remoteTracks = tracks.filter(
-  t => t.participant.identity !== localParticipant?.identity
-    && t.publication?.track != null
-);
-const localTrack = tracks.find(
-  t => t.participant.identity === localParticipant?.identity
-    && t.publication?.track != null
-);
+  // 2. Búsqueda segura de tracks
+  const remoteTrack = tracks.find(
+    t => t.participant.identity !== localParticipant?.identity && t.publication?.track != null
+  ) ?? null;
 
-  const mainTrack  = swapped ? localTrack      : remoteTracks[0];
-  const thumbTrack = swapped ? remoteTracks[0] : localTrack;
-  /*console log temporal para verificar la card que aparece al hacer video llamada */
-  console.log('swapped:', swapped, 'mainTrack:', !!mainTrack, 'thumbTrack:', !!thumbTrack, 'remoteTracks:', remoteTracks.length, 'localTrack:', !!localTrack);
+  const localTrack = tracks.find(
+    t => t.participant.identity === localParticipant?.identity && t.publication?.track != null
+  ) ?? null;
 
-return (
+  // 3. Lógica robusta de intercambio
+  const canSwap = Boolean(localTrack && remoteTrack);
+  const isActuallySwapped = swapped && canSwap;
+
+  const mainTrack  = isActuallySwapped ? localTrack  : remoteTrack;
+  const thumbTrack = isActuallySwapped ? remoteTrack : localTrack;
+
+  /* console log temporal para verificar la card que aparece al hacer video llamada */
+  console.log('swapped:', swapped, 'mainTrack:', !!mainTrack, 'thumbTrack:', !!thumbTrack, 'canSwap:', canSwap);
+
+  return (
     <div style={{ position: 'absolute', inset: 0, background: '#000' }}>
 
       {/* Video principal — pantalla completa */}
@@ -147,7 +154,8 @@ return (
       )}
 
       {/* Video secundario — card chiquita, tappeable */}
-      {thumbTrack && (!camOff || swapped) && (
+      {/* Agregamos canSwap para asegurarnos de que no intente renderizar un track fantasma */}
+      {canSwap && thumbTrack && (!camOff || swapped) && (
         <div
           onClick={() => setSwapped(s => !s)}
           style={{
@@ -166,7 +174,7 @@ return (
         </div>
       )}
     </div>
-    );
+  );
 }
 
 function GiftOverlay({ gift, onDone }) {
