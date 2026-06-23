@@ -269,7 +269,7 @@ export default function MiniChat({ theme = "dark", onClose, role = "user", creat
   const [translateEnabled, setTranslateEnabled] = useState(false);
 
   const bottomRef    = useRef(null);
-  const translateRef = useRef(translateEnabled);
+
 
   const channelRef = useRef(null);
   useEffect(() => {
