@@ -53,7 +53,7 @@ function IncomingGiftToast({ gift, onDone }) {
 }
 
 
-function CreatorCallLayout({ camOff }) {
+function CreatorCallLayout() {
   const [swapped, setSwapped] = useState(false);
   
   // 1. Sin onlySubscribed para evitar retrasos y parpadeos en la red
