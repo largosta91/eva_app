@@ -57,7 +57,7 @@ function CreatorCallLayout() {
   const [swapped, setSwapped] = useState(false);
   
   // 1. Sin onlySubscribed para evitar retrasos y parpadeos en la red
-  const tracks = useTracks([Track.Source.Camera]); 
+ const tracks = useTracks([Track.Source.Camera], { onlySubscribed: false });
   const { localParticipant } = useLocalParticipant();
 
   // 2. Buscamos de forma segura un solo track (como en el Bloque 2)
@@ -212,7 +212,7 @@ useEffect(() => {
       token={token}
       serverUrl={import.meta.env.VITE_LIVEKIT_URL}
       connect={true}
-      video={!camOff}
+      video={true}
       audio={!muted}
       style={{ height: '100%', position: 'absolute', inset: 0 }}
     >
