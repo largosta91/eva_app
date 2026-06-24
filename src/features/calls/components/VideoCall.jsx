@@ -1,9 +1,8 @@
 // 📁 src/features/calls/components/VideoCall.jsx
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import GiftPanel                       from "../../chat/components/GiftPanel";
 import CallControls                    from "./CallControls";
 import MiniChat                        from "./MiniChat.jsx";
-import { supabase }                    from "../../../services/api/supabase";
 import {
   LiveKitRoom,
   useTracks,
@@ -50,11 +49,6 @@ const SOUNDS = {
   sonidoFenix: Fenix
 };
 
-const playGiftSound = (soundKey) => {
-  const src = SOUNDS[soundKey];
-  if (!src) return;
-  new Audio(src).play().catch(() => {});
-};
 
 const OVERLAY_KEYFRAMES = `
   @keyframes gift-overlay-in {
@@ -100,6 +94,7 @@ function makeOverlayParticles(count) {
 
 const isVideo = (src) => typeof src === "string" && src.endsWith(".mp4");
 
+// eslint-disable-next-line react-refresh/only-export-components
 function GiftMedia({ src, alt, style }) {
   if (isVideo(src)) {
     return <video src={src} autoPlay loop muted playsInline style={style} />;
@@ -107,7 +102,7 @@ function GiftMedia({ src, alt, style }) {
   return <img src={src} alt={alt} style={style} />;
 }
 
-
+// eslint-disable-next-line react-refresh/only-export-components
 function CallLayout({ camOff }) {
   const [swapped, setSwapped] = useState(false);
   
@@ -177,6 +172,7 @@ function CallLayout({ camOff }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 function GiftOverlay({ gift, onDone }) {
   const [phase, setPhase] = useState("in");
   const [particles] = useState(() => makeOverlayParticles(24));
@@ -326,273 +322,4 @@ function GiftOverlay({ gift, onDone }) {
 }
 
 //------------------------consulta de credito-----------------------------//
-const fmtTime = s =>
-  `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
-export default function VideoCall({
-  user    = { id: "mock_user_1",    name: "Carlos", credits: 0 },
-  creator = { id: "mock_creator_1", name: "Sofía",  avatar: null },
-  onEnd,
-  theme = "dark",
-  token = null,
-  roomName = null,
-}) {
-
-  const [secs, setSecs]             = useState(0);
-  const [status, setStatus]         = useState("connecting");
-  const [credits, setCredits]       = useState(0);
-  const [muted, setMuted]           = useState(false);
-  const [camOff, setCamOff]         = useState(false);
-  const [showGifts, setShowGifts]   = useState(false);
-  const [activeGift, setActiveGift] = useState(null);
-  const [showChat, setShowChat]     = useState(false);
-
-  const _localVideoRef  = useRef(null);
-  const _remoteVideoRef = useRef(null);
-
-  // ── Cargar créditos reales desde Supabase ──
-  useEffect(() => {
-    const loadCredits = async () => {
-      const { data, error } = await supabase
-        .from("users")
-        .select("credits")
-        .eq("id", user.id)
-        .single();
-      if (error) {
-        console.error("Error cargando créditos:", error);
-        return;
-      }
-      if (data) setCredits(data.credits);
-    };
-    loadCredits();
-  }, [user.id]);
-
-  // ── Timer visual de llamada ──
-  useEffect(() => {
-    const t1 = setTimeout(() => setStatus("connected"), 1500);
-    const t2 = setInterval(() => setSecs(prev => prev + 1), 1000);
-    return () => { clearTimeout(t1); clearInterval(t2); };
-  }, []);
-
-  // ── Enviar regalo seguro usando RPC ──
-  const sendGift = async (gift) => {
-    if (credits < gift.cost) {
-      console.warn("Créditos insuficientes");
-      return;
-    }
-
-    const { data, error } = await supabase.rpc("send_gift", {
-      p_creator_id: creator.id,
-      p_gift_name:  gift.name,
-    });
-
-    if (error) {
-      console.error("Error enviando regalo:", error);
-      return;
-    }
-
-    if (!data.ok) {
-      if (data.error === "insufficient_credits") {
-        console.warn("Créditos insuficientes (backend)");
-      } else {
-        console.error("Error del backend:", data.error);
-      }
-      return;
-    }
-
-    setCredits(data.credits_remaining);
-    playGiftSound(gift.soundKey);
-    setActiveGift(gift);
-    setShowGifts(false);
-    console.log("Regalo enviado:", gift.name, "| Créditos restantes:", data.credits_remaining);
-  };
-
-  // ── Finalizar llamada ──
-const handleEnd = async () => {
-  setStatus("ended");
-  if (roomName) {
-    await supabase
-      .from("call_requests")
-      .update({ status: "ended" })
-      .eq("room_name", roomName)
-      .eq("status", "accepted"); // solo actualiza si estaba activa
-  }
-  onEnd?.();
-};
-
-// ── Escuchar si la creadora cuelga ──
-useEffect(() => {
-  if (!roomName) return;
-
-  const channel = supabase
-    .channel(`call-end:${roomName}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "UPDATE",
-        schema: "public",
-        table: "call_requests",
-        filter: `room_name=eq.${roomName}`,
-      },
-      (payload) => {
-        if (payload.new.status === "ended") {
-          setStatus("ended");
-          onEnd?.();
-        }
-      }
-    )
-    .subscribe();
-
-  return () => supabase.removeChannel(channel);
-}, [roomName, onEnd]);
-
-//----------------------------------------------------------------------------------//
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black flex flex-col overflow-hidden">
-
-      {/* ── VIDEO / LIVEKIT ── */}
-      <div className="absolute inset-0">
-        {token && roomName ? (
-          <LiveKitRoom
-            token={token}
-            serverUrl={import.meta.env.VITE_LIVEKIT_URL}
-            connect={true}
-            video={!camOff}
-            audio={!muted}
-            style={{ height: '100%', position: 'absolute', inset: 0 }}
-              >
-            <CallLayout camOff={camOff} />
-            </LiveKitRoom>
-            ) : (
-          <div
-            className="w-full h-full flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, #1a0830, #09080f)" }}
-          >
-            <span style={{ fontSize: 160, opacity: 0.15 }}>💫</span>
-          </div>
-        )}
-      </div>
-
-      {activeGift && (
-        <GiftOverlay
-          gift={activeGift}
-          onDone={() => setActiveGift(null)}
-        />
-      )}
-
-      <div
-        className="absolute top-0 left-0 right-0 flex items-center justify-between px-5 py-4 z-10"
-        style={{ background: "linear-gradient(to bottom, rgba(0,0,0,.7), transparent)" }}
-      >
-        <div className="text-white font-mono text-base font-semibold">
-          {fmtTime(secs)}
-        </div>
-
-        <div
-          className="flex items-center gap-2 px-3 py-1.5 rounded-full"
-          style={{
-            background: "rgba(201,168,76,.2)",
-            border: "1px solid rgba(201,168,76,.4)"
-          }}
-        >
-          <span className="text-sm">💎</span>
-          <span className="text-[#c9a84c] text-xs font-bold">{credits}</span>
-          <span className="text-[#7a748f] text-xs">· −50/min</span>
-        </div>
-      </div>
-
-      {status === "connecting" && !token && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
-          <div className="text-6xl mb-4">🌺</div>
-          <div
-            className="text-white text-2xl font-semibold mb-2"
-            style={{ fontFamily: "'Cormorant Garamond', serif" }}
-          >
-            {creator.name}
-          </div>
-          <div className="text-white/60 text-sm">Conectando...</div>
-        </div>
-      )}
-
-     {camOff && (
-        <div
-          className="absolute z-20 rounded-2xl overflow-hidden flex items-center justify-center"
-          style={{
-            bottom: 140, right: 16,
-            width: 100, height: 140,
-            background: "#1a1826",
-            border: "2px solid rgba(255,255,255,.2)"
-          }}
-        >
-          <span style={{ fontSize: 40 }}>🚫</span>
-        </div>
-      )}
-
-      <div className="absolute z-20" style={{ bottom: 120, left: 20 }}>
-        <button
-          onClick={() => setShowGifts(true)}
-          className="flex flex-col items-center gap-1 bg-transparent border-none cursor-pointer active:scale-90 transition-transform"
-        >
-          <div
-            className="w-12 h-12 rounded-full flex items-center justify-center"
-            style={{ background: "rgba(255,255,255,.15)", backdropFilter: "blur(10px)" }}
-          >
-            <span className="text-2xl">🎁</span>
-          </div>
-          <span className="text-white/60 text-[10px]">Regalo</span>
-        </button>
-      </div>
-
-      <div className="absolute z-20" style={{ bottom: 120, left: 80 }}>
-        <button
-          onClick={() => setShowChat(c => !c)}
-          className="flex flex-col items-center gap-1 bg-transparent border-none cursor-pointer active:scale-90 transition-transform"
-        >
-          <div
-            className="w-12 h-12 rounded-full flex items-center justify-center"
-            style={{
-              background: showChat ? "rgba(201,168,76,.35)" : "rgba(255,255,255,.15)",
-              backdropFilter: "blur(10px)",
-              border: showChat ? "1px solid rgba(201,168,76,.6)" : "none",
-            }}
-          >
-            <span className="text-2xl">💬</span>
-          </div>
-          <span className="text-white/60 text-[10px]">Chat</span>
-        </button>
-      </div>
-
-      <CallControls
-        muted={muted}
-        camOff={camOff}
-        onToggleMute={() => setMuted(m => !m)}
-        onToggleCam={() => setCamOff(c => !c)}
-        onEnd={handleEnd}
-      />
-
-      {showGifts && (
-        <GiftPanel
-          context="call"
-          onSend={sendGift}
-          onClose={() => setShowGifts(false)}
-          credits={credits}
-          theme={theme}
-        />
-      )}
-
-    {showChat && (
-  <MiniChat
-    theme={theme}
-    onClose={() => setShowChat(false)}
-    creator={creator}
-    credits={credits}
-    onCreditsUpdate={setCredits}
-    roomName={roomName}
-    userId={user.id}
-  />
-)}
-
-    </div>
-  );
-}

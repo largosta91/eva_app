@@ -269,25 +269,32 @@ export default function MiniChat({ theme = "dark", onClose, role = "user", creat
   const [translateEnabled, setTranslateEnabled] = useState(false);
 
   const bottomRef    = useRef(null);
-
-
   const channelRef = useRef(null);
-  useEffect(() => {
-    console.log("[MiniChat] suscribiendo canal, roomName:", roomName, "userId:", userId);
-    if (!roomName) return;
-    const ch = supabase.channel(`call:${roomName}`)
-      .on("broadcast", { event: "chat_message" }, async ({ payload }) => {
-        if (payload.sender_id === userId) return;
-        let msgText = payload.text;
-        if (translateRef.current) msgText = await fetchTranslation(payload.text);
-        setMessages(prev => [...prev, { id: payload.id, text: msgText, sender: "them" }]);
-      })
-      .subscribe();
-    channelRef.current = ch;
-    return () => { supabase.removeChannel(ch); };
-  }, [roomName]);
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  const translateRef = useRef(false);
 
+ useEffect(() => {
+  if (!roomName) return;
+  const channel = supabase.channel(`call:${roomName}`, {
+    config: { broadcast: { self: true } },
+  });
+  channel.on("broadcast", { event: "chat_message" }, async ({ payload }) => {
+    if (payload.sender_id === userId) return;
+    let msgText = payload.text;
+    if (translateRef.current) msgText = await fetchTranslation(payload.text);
+    setMessages(prev => [...prev, { id: payload.id, text: msgText, sender: "them" }]);
+  });
+  channel.subscribe();
+  channelRef.current = channel;
+  return () => { supabase.removeChannel(channel); };
+}, [roomName, userId]);
+
+useEffect(() => {
+  translateRef.current = translateEnabled;
+}, [translateEnabled]);
+
+
+
+   // ── Función para enviar mensajes ─────────────────────────────────────────────
   const handleSend = async () => {
     const currentInput = text.trim();
     if (!currentInput || !roomName) return;
@@ -344,10 +351,14 @@ export default function MiniChat({ theme = "dark", onClose, role = "user", creat
     playGiftSound(gift.soundKey);
     setActiveGift(gift);
     setShowGiftPanel(false);
-    setMessages(prev => [
-      ...prev,
-      { id: Date.now(), text: `${gift.emoji} ${gift.name}`, sender: "me" }
-    ]);
+    setMessages(prev => [...prev,{ id: Date.now(), text: `${gift.emoji} ${gift.name}`, sender: "me" }]);
+
+
+    await channelRef.current?.send({
+      type: "broadcast", 
+      event: "chat_message",
+      payload: { id: Date.now() + 1, text: `${gift.emoji} ${gift.name}`, sender_id: userId },
+    });
   };
 
   const btnStyle = {
