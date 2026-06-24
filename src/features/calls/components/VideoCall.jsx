@@ -455,27 +455,29 @@ useEffect(() => {
     <div className="fixed inset-0 z-50 bg-black flex flex-col overflow-hidden">
 
       {/* ── VIDEO / LIVEKIT ── */}
-      <div className="absolute inset-0">
-        {token && roomName ? (
-          <LiveKitRoom
-            token={token}
-            serverUrl={import.meta.env.VITE_LIVEKIT_URL}
-            connect={true}
-            video={!camOff}
-            audio={!muted}
-            style={{ height: '100%', position: 'absolute', inset: 0 }}
-              >
-            <CallLayout camOff={camOff} />
-            </LiveKitRoom>
-            ) : (
-          <div
-            className="w-full h-full flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, #1a0830, #09080f)" }}
-          >
-            <span style={{ fontSize: 160, opacity: 0.15 }}>💫</span>
-          </div>
-        )}
-      </div>
+<div className="absolute inset-0">
+  {token && roomName ? (
+    <LiveKitRoom
+      token={token}
+      serverUrl={import.meta.env.VITE_LIVEKIT_URL}
+      connect={true}
+      video={!camOff}
+      audio={!muted}
+      style={{ height: '100%', position: 'absolute', inset: 0 }}
+    >
+      <RoomAudioRenderer />
+      <CallLayout camOff={camOff} />
+    </LiveKitRoom>
+  ) : ( // ← Fijate el ")" cerrando el bloque anterior justo antes de los dos puntos
+    <div
+      className="w-full h-full flex items-center justify-center"
+      style={{ background: "linear-gradient(135deg, #1a0830, #09080f)" }}
+    >
+      <span style={{ fontSize: 160, opacity: 0.15 }}>💫</span>
+    </div>
+  )}
+</div>
+
 
       {activeGift && (
         <GiftOverlay
