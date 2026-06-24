@@ -8,6 +8,7 @@ import {
   useTracks,
   VideoTrack,
   useLocalParticipant,
+  RoomAudioRenderer,
 } from "@livekit/components-react";
 import { Track } from "livekit-client";
 import "@livekit/components-styles";
@@ -216,6 +217,7 @@ useEffect(() => {
       audio={!muted}
       style={{ height: '100%', position: 'absolute', inset: 0 }}
     >
+      <RoomAudioRenderer />
       <CreatorCallLayout camOff={camOff} />
     </LiveKitRoom>
   ) : (
