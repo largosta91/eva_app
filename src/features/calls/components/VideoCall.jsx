@@ -457,9 +457,9 @@ useEffect(() => {
     <div className="fixed inset-0 z-50 bg-black flex flex-col overflow-hidden">
 
       {/* ── VIDEO / LIVEKIT ── */}
-<div className="absolute inset-0">
-  {token && roomName ? (
-    <LiveKitRoom
+    <div className="absolute inset-0">
+      {token && roomName ? (
+      <LiveKitRoom
       token={token}
       serverUrl={import.meta.env.VITE_LIVEKIT_URL}
       connect={true}
