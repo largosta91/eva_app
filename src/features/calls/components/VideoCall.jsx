@@ -464,7 +464,7 @@ useEffect(() => {
       serverUrl={import.meta.env.VITE_LIVEKIT_URL}
       connect={true}
       video={!camOff}
-      audio={!muted}
+      audio={true}
       style={{ height: '100%', position: 'absolute', inset: 0 }}
     >
       <RoomAudioRenderer />
