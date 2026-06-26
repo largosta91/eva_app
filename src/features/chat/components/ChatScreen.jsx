@@ -821,10 +821,7 @@ if (callStatus === 'active' && callToken) {
 }
 
   return (
-    <div
-      className="flex flex-col h-screen bg-[#09080f]"
-      style={{ position: 'relative' }}
-    >
+    <div className="flex flex-col bg-[#09080f]" style={{ position: 'relative', height: '100dvh' }}>
 
       {
         activeGift && (
@@ -936,7 +933,8 @@ if (callStatus === 'active' && callToken) {
 
       {/* INPUT */}
 
-      <div className="py-2.5 px-3.5 pb-5 bg-[#111018] border-t border-[rgba(201,168,76,.14)] flex gap-2.5 items-center">
+  <div className="py-2.5 px-3.5 bg-[#111018] border-t border-[rgba(201,168,76,.14)] flex gap-2.5 items-center" 
+      style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}>
 
         <button
           onClick={() => {
