@@ -16,7 +16,7 @@ setAppHeight();
 // 🔐 CANDADO DE SEGURIDAD GRATUITO
 const password = prompt("Ingresá la clave secreta para acceder a Eva App:");
 
-if (password !== "sheilamividateamo") {
+if (password !== "argentina2022") {
   document.body.innerHTML = `
     <div style="
       display: flex; 
