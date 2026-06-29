@@ -1,23 +1,7 @@
 // 📁 src/features/calls/components/CallControls.jsx
 //
-// Controles de la videollamada — mic, cámara, colgar y subtítulos.
-// Componente puramente visual que recibe funciones desde VideoCall.jsx.
-//
-// ── BACKEND ────────────────────────────────────────────────────────────────
-// Ahora solo simula acciones. Cuando tengas backend:
-//
-//   Silenciar micrófono:
-//     localStream.getAudioTracks()[0].enabled = !muted
-//     socket.emit('mute', { callId, muted: !muted })
-//
-//   Apagar cámara:
-//     localStream.getVideoTracks()[0].enabled = !camOff
-//     socket.emit('cam_off', { callId, camOff: !camOff })
-//
-//   Colgar:
-//     socket.emit('end_call', { callId })
-//     pc.close()
-//     localStream.getTracks().forEach(t => t.stop())
+// Controles de la videollamada — mic, cámara, colgar y chat.
+// Componente puramente visual que recibe funciones y estados desde el contenedor
 //
 // Props:
 //   theme             → 'dark' | 'light'
@@ -27,6 +11,7 @@
 //   subtitlesOn       → boolean — estado actual de los subtítulos
 //   onToggleMute      → función para alternar el mic
 //   onToggleCam       → función para alternar la cámara
+//   onToggleSubtitles → función para alternar los subtítulos
 
 export default function CallControls({
   onEnd,
@@ -37,14 +22,29 @@ export default function CallControls({
   miniChatAbierto   = false, // <-- IMPORTANTE: El padre debe pasar este estado
 }) {
 
+  /**
+   * Invoca la función pasada por props (onToggleMute) para cambiar 
+   * el estado del micrófono entre encendido (unmute) y apagado (mute) 
+   * en el componente padre.
+   */
   const handleMute = () => {
     onToggleMute?.();
   };
 
+  /**
+   * Invoca la función pasada por props (onToggleCam) para cambiar 
+   * el estado de la cámara de video entre encendida y apagada 
+   * en el componente padre.
+   */
   const handleToggleCamera = () => {
     onToggleCam?.();
   };
 
+  /**
+   * Invoca la función pasada por props (onEnd) para finalizar la 
+   * videollamada, desencadenando la lógica de desconexión y cierre 
+   * en el componente padre.
+   */
   const handleEndCall = () => {
     onEnd?.();
   };

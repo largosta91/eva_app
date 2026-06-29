@@ -71,30 +71,25 @@ export default function RegisterForm() {
 
         {/* ✅ Checkbox términos */}
         <div className="flex items-start gap-3 px-1">
-          <input
-            type="checkbox"
-            id="terms"
-            checked={accepted}
-            onChange={e => setAccepted(e.target.checked)}
-            className="mt-0.5 accent-[#c9a84c] w-4 h-4 shrink-0 cursor-pointer"
+        <input
+          type="checkbox"
+          id="terms"
+          checked={accepted}
+          onChange={e => setAccepted(e.target.checked)}
+          className="mt-0.5 accent-[#c9a84c] w-4 h-4 shrink-0 cursor-pointer"
           />
-          <label htmlFor="terms" className="text-xs text-[#7a748f] leading-relaxed cursor-pointer">
-            Confirmo que tengo +18 años y acepto los{' '}
-            <span
-              onClick={() => window.open('/terms', '_blank')}
-              className="text-[#c9a84c] underline cursor-pointer"
-            >
-              Términos y Condiciones
-            </span>{' '}
-            y la{' '}
-            <span
-              onClick={() => window.open('/privacy', '_blank')}
-              className="text-[#c9a84c] underline cursor-pointer"
-            >
-              Política de Privacidad
-            </span>
-          </label>
+        <label htmlFor="terms" className="text-xs text-[#7a748f] leading-relaxed cursor-pointer">
+          Confirmo que tengo +18 años y acepto los{' '}
+        <a href="/terms" target="_blank" className="text-[#c9a84c] underline">
+          Términos y Condiciones
+        </a>{' '}
+          y la{' '}
+        <a href="/privacy" target="_blank" className="text-[#c9a84c] underline">
+          Política de Privacidad
+        </a>
+        </label>
         </div>
+
 
         <button onClick={handleRegister} disabled={loading}
           className="w-full py-4 rounded-full font-semibold text-[15px] text-[#09080f] bg-gradient-to-r from-[#c9a84c] to-[#f0d882] border-none cursor-pointer shadow-[0_8px_30px_rgba(201,168,76,.3)] disabled:opacity-60">

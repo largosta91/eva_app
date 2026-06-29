@@ -12,10 +12,18 @@ import {
 import { Track } from "livekit-client";
 import "@livekit/components-styles";
 
+/**
+ * Función helper que recibe el tiempo en segundos y lo transforma
+ * a un formato de cadena legible "MM:SS" con ceros a la izquierda.
+ */
 const fmtTime = s =>
   `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
 // ── Toast de regalo entrante ─────────────────────────────
+/**
+ * Componente visual flotante (Toast) para notificar al creador cuando recibe un regalo.
+ * Cuenta con un temporizador interno que invoca 'onDone' tras 3 segundos para cerrarse solo.
+ */
 function IncomingGiftToast({ gift, onDone }) {
   useEffect(() => {
     const t = setTimeout(() => onDone?.(), 3000);
@@ -52,7 +60,11 @@ function IncomingGiftToast({ gift, onDone }) {
   );
 }
 
-
+/**
+ * Componente encargado del Layout/Disposición de los videos dentro de la llamada.
+ * Consume los tracks de LiveKit, separa de forma segura el video remoto del video local
+ * y maneja la alternancia (swap) para decidir cuál va en grande y cuál en miniatura.
+ */
 function CreatorCallLayout() {
   const [swapped, setSwapped] = useState(false);
   
@@ -121,7 +133,12 @@ function CreatorCallLayout() {
   );
 }
 
-
+/**
+ * Componente de exportación por defecto: Interfaz general de videollamada para el creador.
+ * Orquesta el estado global de la transmisión (tiempo, audio/video mute, chat flotante,
+ * ingresos de créditos por minuto/regalos), inicializa la sala de LiveKit y gestiona 
+ * la desconexión síncrona/asíncrona mediante Supabase.
+ */
 export default function CreatorVideoCall({
   user    = { id: "mock_user_1", name: "Carlos" },
   onEnd,
@@ -137,6 +154,10 @@ export default function CreatorVideoCall({
   const [activeGift, setActiveGift] = useState(null);
   const [creatorId, setCreatorId]   = useState(null);
 
+/**
+ * Efecto para recuperar el ID único del usuario (creador) logueado en Supabase 
+ * al cargar el componente, pasándoselo al MiniChat.
+ */
 useEffect(() => {
   supabase.auth.getUser().then(({ data }) => {
     setCreatorId(data?.user?.id ?? null);
@@ -146,6 +167,10 @@ useEffect(() => {
   const _localVideoRef  = useRef(null);
   const _remoteVideoRef = useRef(null);
 
+  /**
+   * Efecto que simula el cambio de estado inicial a "connected" a los 1.5s
+   * y configura el cronómetro/contador de la llamada de forma incremental cada segundo.
+   */
   useEffect(() => {
     const t1 = setTimeout(() => setStatus("connected"), 1500);
     const t2 = setInterval(() => setSecs(s => s + 1), 1000);
@@ -154,6 +179,10 @@ useEffect(() => {
 
   // Mock: simula un regalo entrante a los 5 segundos
   // BACKEND: borrar este useEffect, reemplazar con socket
+  /**
+   * Efecto temporal de simulación para disparar un regalo mock (Diamante)
+   * a los 5 segundos e incrementar el contador de dinero acumulado.
+   */
   useEffect(() => {
     const t = setTimeout(() => {
       setActiveGift({ emoji: "💎", name: "Diamante", cost: 40, color: "#7c3aed" });
@@ -164,6 +193,11 @@ useEffect(() => {
 
 
 // ── Finalizar llamada ──
+/**
+ * Manejador local y asíncrono para colgar de forma manual. Modifica el estado,
+ * envía un update a la tabla de base de datos 'call_requests' pasando el estado
+ * a 'ended' y corre la función callback 'onEnd'.
+ */
 const handleEnd = async () => {
   setStatus("ended");
   if (roomName) {
@@ -177,6 +211,11 @@ const handleEnd = async () => {
 };
 
 // ── Escuchar si el user cuelga ──
+/**
+ * Efecto de escucha en tiempo real mediante canales de Supabase. Monitorea los
+ * eventos UPDATE sobre la fila correspondiente a la sala de llamada para colgar el
+ * lado del creador inmediatamente si el cliente termina la sesión primero.
+ */
 useEffect(() => {
   if (!roomName) return;
 

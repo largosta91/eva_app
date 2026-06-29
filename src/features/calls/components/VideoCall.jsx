@@ -1,8 +1,12 @@
 // 📁 src/features/calls/components/VideoCall.jsx
 import { useState, useEffect, useRef } from "react";
+
+// Importaciones de componentes de la interfaz de usuario locales
 import GiftPanel                       from "../../chat/components/GiftPanel";
 import CallControls                    from "./CallControls";
 import MiniChat                        from "./MiniChat.jsx";
+
+// Importaciones de LiveKit para manejar la conexión de video/audio y los renderizadores
 import {
   LiveKitRoom,
   useTracks,
@@ -14,8 +18,10 @@ import {
 import { Track } from "livekit-client";
 import "@livekit/components-styles";
 
-
+// Importación de Supabase para la base de datos y backend
 import { supabase } from "../../../services/api/supabase";
+
+// Importación de todos los archivos de sonido (assets) utilizados para los regalos
 import sonidobasico from "../../../assets/sounds/sonidobasico.mp3";
 import rosa         from "../../../assets/sounds/rosa.mp3";
 import chocolate    from "../../../assets/sounds/wow.mp3";
@@ -33,8 +39,7 @@ import pirotecnia   from "../../../assets/sounds/pirotecnia.mp3";
 import oso          from "../../../assets/sounds/oso.mp3";
 import colibri      from "../../../assets/sounds/colibri.mp3";
 
-
-
+// Objeto constante que mapea los nombres de los sonidos con los archivos importados
 const SOUNDS = {
   basico:      sonidobasico,
   rosa:        rosa,
@@ -54,13 +59,14 @@ const SOUNDS = {
   sonidoFenix: Fenix
 };
 
+// Función encargada de reproducir el sonido correspondiente al regalo enviado
 const playGiftSound = (soundKey) => {
   const src = SOUNDS[soundKey];
-  if (!src) return;
-  new Audio(src).play().catch(() => {});
+  if (!src) return; // Si no existe el sonido, sale de la función
+  new Audio(src).play().catch(() => {}); // Reproduce el sonido y atrapa errores (ej. bloqueo del navegador)
 };
 
-
+// Definición de animaciones CSS (keyframes) en forma de string para inyectar en los estilos
 const OVERLAY_KEYFRAMES = `
   @keyframes gift-overlay-in {
     0%   { transform: translate(-50%, -50%) scale(0) rotate(-15deg); opacity: 0; }
@@ -90,8 +96,10 @@ const OVERLAY_KEYFRAMES = `
   }
 `;
 
+// Paleta de colores utilizada para las partículas/confeti de los regalos
 const OVERLAY_COLORS = ["#c9a84c","#fff","#ff6b8a","#7c3aed","#4ade80"];
 
+// Función para generar un array de partículas con posiciones y colores aleatorios
 function makeOverlayParticles(count) {
   return Array.from({ length: count }, (_, i) => ({
     id: i,
@@ -103,9 +111,10 @@ function makeOverlayParticles(count) {
   }));
 }
 
+// Helper para determinar si el recurso multimedia es un video basándose en la extensión
 const isVideo = (src) => typeof src === "string" && src.endsWith(".mp4");
 
-
+// Componente que decide si renderiza una etiqueta <video> o <img> según el tipo de archivo del regalo
 function GiftMedia({ src, alt, style }) {
   if (isVideo(src)) {
     return <video src={src} autoPlay loop muted playsInline style={style} />;
@@ -113,26 +122,30 @@ function GiftMedia({ src, alt, style }) {
   return <img src={src} alt={alt} style={style} />;
 }
 
+// Componente que maneja la disposición (layout) de los videos en la llamada (principal y miniatura)
 function CallLayout({ camOff }) {
+  // Estado para controlar si las cámaras están intercambiadas
   const [swapped, setSwapped] = useState(false);
   
   // 1. Quitamos onlySubscribed para mayor velocidad y estabilidad
   const tracks = useTracks([Track.Source.Camera]); 
   const { localParticipant } = useLocalParticipant();
 
-  // 2. Búsqueda segura de tracks
+  // 2. Búsqueda segura de tracks para identificar cuál es el remoto
   const remoteTrack = tracks.find(
     t => t.participant.identity !== localParticipant?.identity && t.publication?.track != null
   ) ?? null;
 
+  // Búsqueda segura de tracks para identificar cuál es el local
   const localTrack = tracks.find(
     t => t.participant.identity === localParticipant?.identity && t.publication?.track != null
   ) ?? null;
 
-  // 3. Lógica robusta de intercambio
+  // 3. Lógica robusta de intercambio (solo permite intercambiar si ambos tracks existen)
   const canSwap = Boolean(localTrack && remoteTrack);
   const isActuallySwapped = swapped && canSwap;
 
+  // Asignación de qué track va en la vista principal y cuál en la miniatura
   const mainTrack  = isActuallySwapped ? localTrack  : remoteTrack;
   const thumbTrack = isActuallySwapped ? remoteTrack : localTrack;
 
@@ -149,6 +162,7 @@ function CallLayout({ camOff }) {
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
       ) : (
+        // Fallback visual (pantalla de espera) cuando no hay track principal
         <div style={{
           width: '100%', height: '100%',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -162,7 +176,7 @@ function CallLayout({ camOff }) {
       {/* Agregamos canSwap para asegurarnos de que no intente renderizar un track fantasma */}
       {canSwap && thumbTrack && (!camOff || swapped) && (
         <div
-          onClick={() => setSwapped(s => !s)}
+          onClick={() => setSwapped(s => !s)} // Al hacer click, intercambia las cámaras
           style={{
             position: 'absolute', bottom: 140, right: 16,
             width: 100, height: 140,
@@ -182,24 +196,30 @@ function CallLayout({ camOff }) {
   );
 }
 
+// Componente para renderizar la animación visual de un regalo en pantalla
 function GiftOverlay({ gift, onDone }) {
+  // Manejo de las fases de la animación (entrada/salida)
   const [phase, setPhase] = useState("in");
+  // Inicialización de las partículas usando el helper
   const [particles] = useState(() => makeOverlayParticles(24));
 
+  // Clasificación del tamaño/tipo de regalo basándose en su ID
   const isFullscreen = [3,8,11,17,18].includes(gift.id);
   const isLarge      = [10,12,13,14,15,16,19].includes(gift.id);
 
+  // Efecto para temporizar cuánto tiempo se muestra la animación antes de salir y desmontarse
   useEffect(() => {
     const showMs = gift.duration ?? (isFullscreen || isLarge ? 4000 : 2000);
-    const t1 = setTimeout(() => setPhase("out"), showMs);
-    const t2 = setTimeout(() => onDone?.(), showMs + 500);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    const t1 = setTimeout(() => setPhase("out"), showMs); // Empieza animación de salida
+    const t2 = setTimeout(() => onDone?.(), showMs + 500); // Avisa al padre que terminó
+    return () => { clearTimeout(t1); clearTimeout(t2); }; // Limpieza de timeouts
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── GRUPO 1: pantalla completa ──
   if (isFullscreen) {
     return (
       <>
+        {/* Inyección de keyframes CSS */}
         <style>{OVERLAY_KEYFRAMES}</style>
         <div style={{
           position: "fixed", inset: 0, zIndex: 60,
@@ -222,6 +242,7 @@ function GiftOverlay({ gift, onDone }) {
               filter: `drop-shadow(0 0 60px ${gift.color})`,
             }}
           />
+          {/* Contenedor del nombre del regalo (actualmente vacío pero preparado con estilos) */}
           <div style={{
             position: "absolute",
             bottom: 60,
@@ -247,6 +268,7 @@ function GiftOverlay({ gift, onDone }) {
   if (isLarge) {
     return (
       <>
+        {/* Inyección de keyframes CSS */}
         <style>{OVERLAY_KEYFRAMES}</style>
         <div style={{
           position: "fixed", inset: 0, zIndex: 60,
@@ -277,8 +299,10 @@ function GiftOverlay({ gift, onDone }) {
   // ── GRUPO 3: tamaño normal con confetti ──
   return (
     <>
+      {/* Inyección de keyframes CSS */}
       <style>{OVERLAY_KEYFRAMES}</style>
 
+      {/* Fondo oscurecido para destacar el regalo */}
       <div style={{
         position: "fixed", inset: 0, zIndex: 60,
         background: "rgba(0,0,0,0.45)",
@@ -296,6 +320,7 @@ function GiftOverlay({ gift, onDone }) {
           ? "gift-overlay-in 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards"
           : "gift-overlay-out 0.5s ease-in forwards",
       }}>
+        {/* Renderizado del array de partículas generadas */}
         {particles.map(p => (
           <div key={p.id} style={{
             position: "absolute", top: "50%", left: "50%",
@@ -306,6 +331,7 @@ function GiftOverlay({ gift, onDone }) {
           }} />
         ))}
 
+        {/* Renderiza imagen o un emoji si no hay imagen definida */}
         {gift.image ? (
           <GiftMedia
             src={gift.image}
@@ -331,9 +357,11 @@ function GiftOverlay({ gift, onDone }) {
 }
 
 //------------------------consulta de credito-----------------------------//
+// Función auxiliar para formatear segundos en formato "MM:SS"
 const fmtTime = s =>
   `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
+// Componente principal exportado para la Videollamada
 export default function VideoCall({
   user    = { id: "mock_user_1",    name: "Carlos", credits: 0 },
   creator = { id: "mock_creator_1", name: "Sofía",  avatar: null },
@@ -343,19 +371,22 @@ export default function VideoCall({
   roomName = null,
 }) {
 
-  const [secs, setSecs]             = useState(0);
-  const [status, setStatus]         = useState("connecting");
-  const [credits, setCredits]       = useState(0);
-  const [muted, setMuted]           = useState(false);
-  const [camOff, setCamOff]         = useState(false);
-  const [showGifts, setShowGifts]   = useState(false);
-  const [activeGift, setActiveGift] = useState(null);
-  const [showChat, setShowChat]     = useState(false);
+  // Estados locales para el control de la llamada, créditos y la interfaz
+  const [secs, setSecs]             = useState(0); // Tiempo transcurrido
+  const [status, setStatus]         = useState("connecting"); // Estado de conexión
+  const [credits, setCredits]       = useState(0); // Créditos del usuario
+  const [muted, setMuted]           = useState(false); // Estado del micrófono
+  const [camOff, setCamOff]         = useState(false); // Estado de la cámara
+  const [showGifts, setShowGifts]   = useState(false); // Mostrar panel de regalos
+  const [activeGift, setActiveGift] = useState(null); // Regalo siendo animado actualmente
+  const [showChat, setShowChat]     = useState(false); // Mostrar chat
 
+  // Referencias a los elementos de video (actualmente no usadas directamente en el render principal)
   const _localVideoRef  = useRef(null);
   const _remoteVideoRef = useRef(null);
 
   // ── Cargar créditos reales desde Supabase ──
+  // Efecto que se ejecuta al montar para obtener los créditos actualizados del usuario
   useEffect(() => {
     const loadCredits = async () => {
       const { data, error } = await supabase
@@ -367,25 +398,29 @@ export default function VideoCall({
         console.error("Error cargando créditos:", error);
         return;
       }
-      if (data) setCredits(data.credits);
+      if (data) setCredits(data.credits); // Actualiza el estado con los créditos reales
     };
     loadCredits();
-  }, [user.id]);
+  }, [user.id]); // Se ejecuta si cambia el ID del usuario
 
   // ── Timer visual de llamada ──
+  // Efecto para manejar el cambio de estado de conexión y el contador de segundos
   useEffect(() => {
-    const t1 = setTimeout(() => setStatus("connected"), 1500);
-    const t2 = setInterval(() => setSecs(prev => prev + 1), 1000);
-    return () => { clearTimeout(t1); clearInterval(t2); };
+    const t1 = setTimeout(() => setStatus("connected"), 1500); // Finge conexión después de 1.5s
+    const t2 = setInterval(() => setSecs(prev => prev + 1), 1000); // Incrementa contador cada segundo
+    return () => { clearTimeout(t1); clearInterval(t2); }; // Limpieza de timers
   }, []);
 
   // ── Enviar regalo seguro usando RPC ──
+  // Función asíncrona para procesar el envío de un regalo vía base de datos
   const sendGift = async (gift) => {
+    // Verificación preliminar en el cliente de los créditos
     if (credits < gift.cost) {
       console.warn("Créditos insuficientes");
       return;
     }
 
+    // Llamada a función remota (RPC) en Supabase para procesar transacción segura
     const { data, error } = await supabase.rpc("send_gift", {
       p_creator_id: creator.id,
       p_gift_name:  gift.name,
@@ -396,6 +431,7 @@ export default function VideoCall({
       return;
     }
 
+    // Manejo de respuesta negativa del backend (por ej. falta de saldo real)
     if (!data.ok) {
       if (data.error === "insufficient_credits") {
         console.warn("Créditos insuficientes (backend)");
@@ -405,6 +441,7 @@ export default function VideoCall({
       return;
     }
 
+    // Si todo salió bien: actualiza saldo, reproduce sonido, muestra animación y cierra panel
     setCredits(data.credits_remaining);
     playGiftSound(gift.soundKey);
     setActiveGift(gift);
@@ -413,64 +450,75 @@ export default function VideoCall({
   };
 
   // ── Finalizar llamada ──
-const handleEnd = async () => {
-  setStatus("ended");
-  if (roomName) {
-    await supabase
-      .from("call_requests")
-      .update({ status: "ended" })
-      .eq("room_name", roomName)
-      .eq("status", "accepted"); // solo actualiza si estaba activa
-  }
-  onEnd?.();
-};
+  // Función invocada al colgar la llamada por el usuario actual
+  const handleEnd = async () => {
+    setStatus("ended");
+    if (roomName) {
+      // Actualiza el registro de la llamada en Supabase para marcarla como terminada
+      await supabase
+        .from("call_requests")
+        .update({ status: "ended" })
+        .eq("room_name", roomName)
+        .eq("status", "accepted"); // solo actualiza si estaba activa
+    }
+    onEnd?.(); // Callback de finalización al padre
+  };
 
-// ── Escuchar si la creadora cuelga ──
-useEffect(() => {
-  if (!roomName) return;
+  // ── Escuchar si la creadora cuelga ──
+  // Efecto para escuchar cambios en tiempo real vía Supabase channels
+  useEffect(() => {
+    if (!roomName) return;
 
-  const channel = supabase
-    .channel(`call-end:${roomName}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "UPDATE",
-        schema: "public",
-        table: "call_requests",
-        filter: `room_name=eq.${roomName}`,
-      },
-      (payload) => {
-        if (payload.new.status === "ended") {
-          setStatus("ended");
-          onEnd?.();
+    // Se suscribe a los cambios en la tabla call_requests para la sala actual
+    const channel = supabase
+      .channel(`call-end:${roomName}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "call_requests",
+          filter: `room_name=eq.${roomName}`,
+        },
+        (payload) => {
+          // Si el estado cambia a 'ended' remotamente, finaliza la llamada en este cliente
+          if (payload.new.status === "ended") {
+            setStatus("ended");
+            onEnd?.();
+          }
         }
-      }
-    )
-    .subscribe();
+      )
+      .subscribe();
 
-  return () => supabase.removeChannel(channel);
-}, [roomName, onEnd]);
+    // Limpieza: desuscribe el canal cuando el componente se desmonta
+    return () => supabase.removeChannel(channel);
+  }, [roomName, onEnd]);
 
 //----------------------------------------------------------------------------------//
 
   return (
+    // Contenedor principal a pantalla completa
     <div className="fixed inset-0 z-50 bg-black flex flex-col overflow-hidden">
 
       {/* ── VIDEO / LIVEKIT ── */}
     <div className="absolute inset-0">
+      {/* Condicional para renderizar el cuarto de LiveKit o una pantalla de carga */}
       {token && roomName ? (
       <LiveKitRoom
-      token={token}
-      serverUrl={import.meta.env.VITE_LIVEKIT_URL}
-      connect={true}
-      video={!camOff}
-      audio={true}
+      token={token} // Token JWT de autenticación para LiveKit
+      serverUrl={import.meta.env.VITE_LIVEKIT_URL} // URL del servidor LiveKit
+      connect={true} // Iniciar conexión automáticamente
+      video={!camOff} // Control de cámara local
+      audio={true} // Control de audio local
       style={{ height: '100%', position: 'absolute', inset: 0 }}
     >
+      {/* Renderiza el audio de los participantes remotos */}
       <RoomAudioRenderer />
+      {/* Renderiza el layout visual (los videos) */}
       <CallLayout camOff={camOff} />
     </LiveKitRoom>
   ) : ( // ← Fijate el ")" cerrando el bloque anterior justo antes de los dos puntos
+    // Pantalla de carga mientras se obtienen token/roomName
     <div
       className="w-full h-full flex items-center justify-center"
       style={{ background: "linear-gradient(135deg, #1a0830, #09080f)" }}
@@ -480,22 +528,25 @@ useEffect(() => {
   )}
 </div>
 
-
+      {/* Renderizado condicional del overlay si hay un regalo activo en animación */}
       {activeGift && (
         <GiftOverlay
           gift={activeGift}
-          onDone={() => setActiveGift(null)}
+          onDone={() => setActiveGift(null)} // Resetea estado cuando termina la animación
         />
       )}
 
+      {/* Barra superior de información (Timer y saldo) */}
       <div
         className="absolute top-0 left-0 right-0 flex items-center justify-between px-5 py-4 z-10"
         style={{ background: "linear-gradient(to bottom, rgba(0,0,0,.7), transparent)" }}
       >
+        {/* Renderiza el tiempo transcurrido */}
         <div className="text-white font-mono text-base font-semibold">
           {fmtTime(secs)}
         </div>
 
+        {/* Indicador de créditos/diamantes restantes */}
         <div
           className="flex items-center gap-2 px-3 py-1.5 rounded-full"
           style={{
@@ -509,6 +560,7 @@ useEffect(() => {
         </div>
       </div>
 
+      {/* Overlay de estado 'conectando' inicial (antes de que conecte LiveKit) */}
       {status === "connecting" && !token && (
         <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
           <div className="text-6xl mb-4">🌺</div>
@@ -522,6 +574,7 @@ useEffect(() => {
         </div>
       )}
 
+      {/* UI indicador visual cuando el usuario local apaga su cámara */}
      {camOff && (
         <div
           className="absolute z-20 rounded-2xl overflow-hidden flex items-center justify-center"
@@ -536,6 +589,7 @@ useEffect(() => {
         </div>
       )}
 
+      {/* Botón Flotante: Abrir panel de regalos */}
       <div className="absolute z-20" style={{ bottom: 120, left: 20 }}>
         <button
           onClick={() => setShowGifts(true)}
@@ -551,6 +605,7 @@ useEffect(() => {
         </button>
       </div>
 
+      {/* Botón Flotante: Abrir mini chat */}
       <div className="absolute z-20" style={{ bottom: 120, left: 80 }}>
         <button
           onClick={() => setShowChat(c => !c)}
@@ -570,6 +625,7 @@ useEffect(() => {
         </button>
       </div>
 
+      {/* Controles inferiores universales (mutear, cámara off, colgar) */}
       <CallControls
         muted={muted}
         camOff={camOff}
@@ -578,23 +634,25 @@ useEffect(() => {
         onEnd={handleEnd}
       />
 
+      {/* Renderizado condicional del Panel de Regalos inferior */}
       {showGifts && (
         <GiftPanel
           context="call"
-          onSend={sendGift}
+          onSend={sendGift} // Envía el evento a la función sendGift
           onClose={() => setShowGifts(false)}
           credits={credits}
           theme={theme}
         />
       )}
 
+    {/* Renderizado condicional de la ventana de Mini Chat sobrepuesta */}
     {showChat && (
   <MiniChat
     theme={theme}
     onClose={() => setShowChat(false)}
     creator={creator}
     credits={credits}
-    onCreditsUpdate={setCredits}
+    onCreditsUpdate={setCredits} // Para que el chat también pueda actualizar los créditos si es necesario
     roomName={roomName}
     userId={user.id}
   />
